@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { GraduationCap, Users, BookOpen, Star, ArrowRight } from 'lucide-react';
+import { GraduationCap, Users, BookOpen, Star, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 function MainMenu() {
+  console.log('MainMenu component loaded');
+
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [showStudentLogin, setShowStudentLogin] = useState(false);
 
   return (
@@ -13,7 +17,7 @@ function MainMenu() {
         <div className="absolute top-20 left-10 w-16 h-16 bg-yellow-300 rounded-full opacity-60 animate-bounce" style={{ animationDelay: '0s' }}></div>
         <div className="absolute top-40 right-20 w-12 h-12 bg-pink-300 rounded-full opacity-60 animate-bounce" style={{ animationDelay: '1s' }}></div>
         <div className="absolute bottom-40 left-20 w-20 h-20 bg-green-300 rounded-full opacity-60 animate-bounce" style={{ animationDelay: '2s' }}></div>
-        <div className="absolute bottom-20 right-40 w-14 h-14 bg-blue-300 rounded-full opacity-60 animate-bounce" style={{ animationDelay: '0.5s' }}></div>
+        <div className="absolute bottom-20 right-40 w-14 h-14 bg-blue-300 rounded-full opacity:60 animate-bounce" style={{ animationDelay: '0.5s' }}></div>
       </div>
 
       <div className="flex flex-col items-center justify-center min-h-screen p-4 relative z-10">
@@ -105,6 +109,7 @@ function MainMenu() {
         <StudentLoginModal 
           onClose={() => setShowStudentLogin(false)}
           onSuccess={() => navigate('/estudiante')}
+          login={login}
         />
       )}
     </div>
@@ -112,37 +117,25 @@ function MainMenu() {
 }
 
 // Componente del Modal de Login para Estudiantes
-function StudentLoginModal({ onClose, onSuccess }) {
-  const [studentCode, setStudentCode] = useState('');
+function StudentLoginModal({ onClose, onSuccess, login }) {
+  const [codigo_alumno, setCodigoAlumno] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Códigos de estudiantes simulados (en producción vendrían de la base de datos)
-  const validCodes = [
-    { code: 'ANA2024', name: 'Ana García', grade: 4, avatar: '👧' },
-    { code: 'CARLOS2024', name: 'Carlos Mendoza', grade: 5, avatar: '👦' },
-    { code: 'MARIA2024', name: 'María López', grade: 6, avatar: '👧' },
-    { code: 'DIEGO2024', name: 'Diego Ruiz', grade: 4, avatar: '👦' }
-  ];
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    // Simular verificación del código
-    setTimeout(() => {
-      const student = validCodes.find(s => s.code.toLowerCase() === studentCode.toLowerCase());
-      
-      if (student) {
-        // Guardar datos del estudiante en localStorage
-        localStorage.setItem('currentStudent', JSON.stringify(student));
-        onSuccess();
-      } else {
-        setError('Código incorrecto. Pide ayuda a tu maestro.');
-      }
-      setLoading(false);
-    }, 1000);
+    const success = await login({ codigo_alumno }, 'student');
+    
+    if (success) {
+      onSuccess();
+    } else {
+      setError('Código de alumno incorrecto. Pide ayuda a tu maestro.');
+    }
+    
+    setLoading(false);
   };
 
   return (
@@ -155,7 +148,7 @@ function StudentLoginModal({ onClose, onSuccess }) {
             <Users className="w-8 h-8 md:w-10 md:h-10 text-white" />
           </div>
           <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-1 md:mb-2">¡Hola Estudiante! 👋</h2>
-          <p className="text-gray-600 text-sm md:text-base">Escribe tu código especial para entrar</p>
+          <p className="text-gray-600 text-sm md:text-base">Ingresa tu código especial para entrar</p>
         </div>
 
         {/* Formulario */}
@@ -166,8 +159,8 @@ function StudentLoginModal({ onClose, onSuccess }) {
             </label>
             <input
               type="text"
-              value={studentCode}
-              onChange={(e) => setStudentCode(e.target.value.toUpperCase())}
+              value={codigo_alumno}
+              onChange={(e) => setCodigoAlumno(e.target.value.toUpperCase())}
               className="w-full px-4 md:px-6 py-3 md:py-4 border-3 border-gray-200 rounded-2xl focus:border-blue-500 focus:outline-none text-center text-xl md:text-2xl font-bold tracking-wider"
               placeholder="ANA2024"
               maxLength={10}
@@ -188,7 +181,7 @@ function StudentLoginModal({ onClose, onSuccess }) {
           <div className="space-y-3 md:space-y-4">
             <button
               type="submit"
-              disabled={loading || studentCode.length < 3}
+              disabled={loading || !codigo_alumno}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 md:py-4 rounded-2xl text-lg md:text-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 md:gap-3"
             >
               {loading ? (
@@ -218,13 +211,16 @@ function StudentLoginModal({ onClose, onSuccess }) {
         <div className="mt-4 md:mt-6 p-3 md:p-4 bg-blue-50 rounded-2xl">
           <h3 className="font-bold text-blue-800 mb-2 text-center text-sm md:text-base">🎮 Códigos de Prueba:</h3>
           <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
-            {validCodes.map((student, index) => (
-              <div key={index} className="text-center">
-                <div className="text-base md:text-lg">{student.avatar}</div>
-                <div className="font-bold text-blue-700 text-xs md:text-sm">{student.code}</div>
-                <div className="text-blue-600 text-xs">{student.name}</div>
-              </div>
-            ))}
+            <div className="text-center">
+              <div className="text-base md:text-lg">👧</div>
+              <div className="font-bold text-blue-700 text-xs md:text-sm">ANA2024</div>
+              <div className="text-blue-600 text-xs"></div>
+            </div>
+            <div className="text-center">
+              <div className="text-base md:text-lg">👦</div>
+              <div className="font-bold text-blue-700 text-xs md:text-sm">CARLOS2024</div>
+              <div className="text-blue-600 text-xs"></div>
+            </div>
           </div>
         </div>
       </div>

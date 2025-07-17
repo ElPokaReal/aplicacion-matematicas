@@ -1,18 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, X, Star, RotateCcw } from 'lucide-react';
-import { useProgress } from '../context/ProgressContext';
-import { generateExercise } from '../utils/exerciseGenerator';
+import { useAuth } from '../context/AuthContext';
+import ExerciseService from '../services/ExerciseService';
+import StudentService from '../services/StudentService';
 import ConfettiAnimation from './ConfettiAnimation';
 
 function ExerciseArea() {
   const { grado } = useParams();
   const navigate = useNavigate();
-  const { updateProgress, addReward } = useProgress();
+  const { studentData, token, updateStudentPoints } = useAuth();
   
-  // Verificar si hay un estudiante logueado
-  const currentStudent = JSON.parse(localStorage.getItem('currentStudent') || 'null');
-  
+  const [availableExercises, setAvailableExercises] = useState([]);
   const [currentExercise, setCurrentExercise] = useState(null);
   const [userAnswer, setUserAnswer] = useState('');
   const [feedback, setFeedback] = useState({
@@ -22,64 +21,131 @@ function ExerciseArea() {
   });
   const [showConfetti, setShowConfetti] = useState(false);
   const [streak, setStreak] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [totalExercisesCount, setTotalExercisesCount] = useState(0);
+  const [completedExercisesCount, setCompletedExercisesCount] = useState(0);
+  const [allExercisesCompleted, setAllExercisesCompleted] = useState(false);
 
   const handleBackNavigation = () => {
-    // Si hay un estudiante logueado, ir a selección de grados
-    // Si no, ir al menú principal
-    if (currentStudent) {
+    if (studentData) {
       navigate('/grados');
     } else {
       navigate('/');
     }
   };
-  useEffect(() => {
-    if (grado) {
-      generateNewExercise();
+
+  const fetchExerciseData = useCallback(async () => {
+    if (!token || !studentData?.id) {
+      setLoading(false);
+      setError('No authentication token or student data found.');
+      return;
     }
-  }, [grado]);
+    try {
+      setLoading(true);
+      setError(null);
+
+      const gradeInt = parseInt(grado);
+
+      // Fetch all exercises for the grade
+      const allExercises = await ExerciseService.getAllExercises(token, gradeInt);
+      const completedExerciseIds = await StudentService.getCompletedExercisesByStudentAndGrade(studentData.id, gradeInt, token);
+
+      const uncompletedExercises = allExercises.filter(
+        (exercise) => !completedExerciseIds.includes(exercise.id)
+      );
+
+      setAvailableExercises(uncompletedExercises);
+
+      // Fetch total count of exercises for the grade
+      const totalCount = await ExerciseService.getTotalExercisesCountByGrade(gradeInt, token);
+      setTotalExercisesCount(totalCount);
+
+      // Update completed exercises count based on the fetched completedExerciseIds
+      setCompletedExercisesCount(completedExerciseIds.length);
+
+      if (totalCount > 0 && uncompletedExercises.length === 0) {
+        setAllExercisesCompleted(true);
+        setCurrentExercise(null); // No more exercises to show
+      } else if (uncompletedExercises.length > 0) {
+        const randomIndex = Math.floor(Math.random() * uncompletedExercises.length);
+        setCurrentExercise(uncompletedExercises[randomIndex]);
+        setAllExercisesCompleted(false);
+      } else { // This means uncompletedExercises.length is 0 and totalCount is also 0 (or less than 0, which shouldn't happen)
+        setCurrentExercise(null);
+        setAllExercisesCompleted(false);
+        // Do NOT set error here, let !currentExercise handle the message
+      }
+    } catch (err) {
+      setError(err.message || 'Failed to load exercise data.');
+      console.error('Error fetching exercise data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [grado, token, studentData]);
+
+  useEffect(() => {
+    fetchExerciseData();
+  }, [fetchExerciseData]);
 
   const generateNewExercise = () => {
-    if (grado) {
-      const exercise = generateExercise(parseInt(grado));
-      setCurrentExercise(exercise);
+    if (availableExercises.length > 0) {
+      const randomIndex = Math.floor(Math.random() * availableExercises.length);
+      setCurrentExercise(availableExercises[randomIndex]);
       setUserAnswer('');
       setFeedback({ show: false, correct: false, message: '' });
+    } else {
+      setError('No hay ejercicios disponibles para este grado.');
     }
   };
 
-  const checkAnswer = () => {
+  const checkAnswer = async () => {
     if (!currentExercise || userAnswer === '') return;
 
-    const userNumAnswer = parseFloat(userAnswer);
-    const correct = Math.abs(userNumAnswer - currentExercise.answer) < 0.01;
+    const correct = userAnswer.toLowerCase() === currentExercise.respuesta_correcta.toLowerCase();
     
     setFeedback({
       show: true,
       correct,
       message: correct ? 
         '¡Excelente! 🎉 ¡Respuesta correcta!' : 
-        `No es correcto. La respuesta era ${currentExercise.answer}`
+        `No es correcto. La respuesta era ${currentExercise.respuesta_correcta}`
     });
 
     if (correct) {
       setShowConfetti(true);
       setStreak(prev => prev + 1);
       setTimeout(() => setShowConfetti(false), 3000);
-      
-      // Check for streak rewards
-      if (streak + 1 === 5) {
-        addReward('🔥 Racha de 5 respuestas correctas');
-      } else if (streak + 1 === 10) {
-        addReward('🚀 Racha de 10 respuestas correctas');
-      }
     } else {
       setStreak(0);
     }
 
-    updateProgress(grado, correct);
+    // Record progress
+    if (studentData && token) {
+      try {
+        await StudentService.recordProgress({
+          estudiante_id: studentData.id,
+          ejercicio_id: currentExercise.id,
+          respuesta_enviada: userAnswer,
+          es_correcta: correct
+        }, token);
+        // After recording progress, re-fetch data to update counts and potentially get a new exercise
+        await fetchExerciseData(); 
+        // Update student points in AuthContext
+        if (correct) {
+          const updatedStudent = await StudentService.getStudentById(studentData.id, token); // Fetch latest student data
+          updateStudentPoints(updatedStudent);
+        } 
+      } catch (err) {
+        console.error('Error recording progress:', err);
+      }
+    }
 
+    // Clear feedback after a short delay, and fetch new exercise data
     setTimeout(() => {
-      generateNewExercise();
+      setFeedback({ show: false, correct: false, message: '' });
+      setUserAnswer('');
+      // fetchExerciseData() is already called after recording progress, so no need to call it again here.
     }, 2500);
   };
 
@@ -89,10 +155,57 @@ function ExerciseArea() {
     }
   };
 
-  if (!currentExercise) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white text-xl">Cargando ejercicio...</div>
+        <div className="text-gray-800 text-xl">Cargando ejercicio...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-500">
+        Error: {error}
+      </div>
+    );
+  }
+
+  if (allExercisesCompleted && totalExercisesCount > 0) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-md">
+          <h2 className="text-3xl font-bold text-green-600 mb-4">¡Felicidades! 🎉</h2>
+          <p className="text-xl text-gray-800 mb-6">
+            Has completado todos los ejercicios de este grado.
+            Tu maestro agregará muchos más pronto.
+          </p>
+          <button
+            onClick={handleBackNavigation}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl text-lg font-bold hover:shadow-lg transition-all"
+          >
+            Volver a Grados
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!currentExercise) {
+    return (
+      <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50">
+        <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-md">
+          <h2 className="text-3xl font-bold text-red-600 mb-4">Oops!</h2>
+          <p className="text-xl text-gray-800 mb-6">
+            No hay ejercicios disponibles para este grado, intenta pasar por aquí más tarde.
+          </p>
+          <button
+            onClick={handleBackNavigation}
+            className="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl text-lg font-bold hover:shadow-lg transition-all"
+          >
+            Volver atrás
+          </button>
+        </div>
       </div>
     );
   }
@@ -106,7 +219,7 @@ function ExerciseArea() {
   const currentGradeInfo = gradeInfo[grado];
 
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 bg-gradient-to-br from-slate-50 to-blue-50">
       {showConfetti && <ConfettiAnimation />}
       
       <div className="max-w-4xl mx-auto">
@@ -115,25 +228,25 @@ function ExerciseArea() {
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={handleBackNavigation}
-            className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full hover:bg-white/30 transition-all"
+            className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-gray-800 px-4 py-2 rounded-full hover:bg-white/30 transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
-            {currentStudent ? 'Grados' : 'Inicio'}
+            {studentData ? 'Grados' : 'Inicio'}
           </button>
           
           <div className="text-center">
-            <h1 className="text-3xl font-bold text-white">{currentGradeInfo?.title}</h1>
+            <h1 className="text-3xl font-bold text-gray-800">{currentGradeInfo?.title}</h1>
             {streak > 0 && (
               <div className="flex items-center gap-1 justify-center mt-1">
                 <span className="text-yellow-300">🔥</span>
-                <span className="text-white font-bold">Racha: {streak}</span>
+                <span className="text-gray-800 font-bold">Racha: {streak}</span>
               </div>
             )}
           </div>
           
           <button
             onClick={generateNewExercise}
-            className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full hover:bg-white/30 transition-all"
+            className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-gray-800 px-4 py-2 rounded-full hover:bg-white/30 transition-all"
           >
             <RotateCcw className="w-5 h-5" />
             Nuevo
@@ -147,26 +260,18 @@ function ExerciseArea() {
           <div className="text-center mb-8">
             <div className="mb-6">
               <span className="inline-block bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium mb-4">
-                {currentExercise.type}
+                {currentExercise.tipo_operacion}
               </span>
             </div>
 
-            {currentExercise.problem && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-xl">
-                <p className="text-lg text-gray-700 leading-relaxed">
-                  {currentExercise.problem}
-                </p>
-              </div>
-            )}
-
             <div className="text-4xl font-bold text-gray-800 mb-8 font-mono">
-              {currentExercise.question}
+              {currentExercise.pregunta}
             </div>
 
             {/* Answer Input */}
             <div className="max-w-md mx-auto">
               <input
-                type="number"
+                type="text" // Changed to text to allow non-numeric answers
                 value={userAnswer}
                 onChange={(e) => setUserAnswer(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -200,16 +305,13 @@ function ExerciseArea() {
                 )}
               </div>
               <p className="text-lg font-bold">{feedback.message}</p>
-              {currentExercise.explanation && (
-                <p className="mt-2 text-sm opacity-80">{currentExercise.explanation}</p>
-              )}
             </div>
           )}
         </div>
 
         {/* Encouragement */}
         <div className="text-center">
-          <p className="text-white/80 text-lg">
+          <p className="text-gray-600 text-lg">
             💪 ¡Sigue así! Cada ejercicio te hace más fuerte en matemáticas
           </p>
         </div>

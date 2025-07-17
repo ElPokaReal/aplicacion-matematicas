@@ -1,98 +1,81 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, Filter, Download, Eye, Star, TrendingUp, Award } from 'lucide-react';
+import { ArrowLeft, Search, Download, Users, Star, TrendingUp, Award, ToggleRight, ToggleLeft } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import StudentService from '../services/StudentService';
 
 function StudentTracking() {
   const navigate = useNavigate();
+  const { token } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('all');
+  const [students, setStudents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const students = [
-    {
-      id: 1,
-      name: 'Ana García',
-      grade: 4,
-      avatar: '👧',
-      exercisesCompleted: 45,
-      stars: 38,
-      averageScore: 85,
-      lastActivity: '2 horas',
-      status: 'active',
-      progress: {
-        suma: 90,
-        resta: 85,
-        multiplicacion: 80,
-        division: 75
-      }
-    },
-    {
-      id: 2,
-      name: 'Carlos Mendoza',
-      grade: 5,
-      avatar: '👦',
-      exercisesCompleted: 62,
-      stars: 55,
-      averageScore: 92,
-      lastActivity: '1 hora',
-      status: 'active',
-      progress: {
-        suma: 95,
-        resta: 90,
-        multiplicacion: 88,
-        division: 85
-      }
-    },
-    {
-      id: 3,
-      name: 'María López',
-      grade: 6,
-      avatar: '👧',
-      exercisesCompleted: 78,
-      stars: 71,
-      averageScore: 88,
-      lastActivity: '30 min',
-      status: 'active',
-      progress: {
-        suma: 92,
-        resta: 88,
-        multiplicacion: 85,
-        division: 82
-      }
-    },
-    {
-      id: 4,
-      name: 'Diego Ruiz',
-      grade: 4,
-      avatar: '👦',
-      exercisesCompleted: 23,
-      stars: 18,
-      averageScore: 72,
-      lastActivity: '1 día',
-      status: 'inactive',
-      progress: {
-        suma: 75,
-        resta: 70,
-        multiplicacion: 65,
-        division: 60
-      }
+  useEffect(() => {
+    fetchStudents();
+  }, [token]);
+
+  const fetchStudents = async () => {
+    if (!token) {
+      setLoading(false);
+      setError('No authentication token found.');
+      return;
     }
-  ];
+    try {
+      setLoading(true);
+      const data = await StudentService.getAllStudents(token);
+      setStudents(data);
+    } catch (err) {
+      setError('Failed to load students.');
+      console.error('Error fetching students:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleStatus = async (studentId, currentStatus) => {
+    try {
+      await StudentService.toggleStudentStatus(studentId, currentStatus, token);
+      // Actualizar el estado local del estudiante
+      setStudents(prevStudents =>
+        prevStudents.map(student =>
+          student.id === studentId ? { ...student, esta_activo: !currentStatus } : student
+        )
+      );
+    } catch (err) {
+      setError('Failed to toggle student status.');
+      console.error('Error toggling student status:', err);
+    }
+  };
 
   const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesGrade = selectedGrade === 'all' || student.grade.toString() === selectedGrade;
+    const matchesSearch =
+      student.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.usuario.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      student.codigo_alumno.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGrade = selectedGrade === 'all' || student.grado.toString() === selectedGrade;
     return matchesSearch && matchesGrade;
   });
 
-  const getStatusColor = (status) => {
-    return status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
+  const getStatusColor = (esta_activo) => {
+    return esta_activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 90) return 'text-green-600';
-    if (score >= 80) return 'text-yellow-600';
-    return 'text-red-600';
+  const getAvatarEmoji = (name) => {
+    const emojis = ['👧', '👦', '🧒', '👶'];
+    const index = name.charCodeAt(0) % emojis.length;
+    return emojis[index];
   };
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando estudiantes...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-blue-50">
@@ -126,21 +109,7 @@ function StudentTracking() {
                 <p className="text-3xl font-bold text-gray-800">{students.length}</p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
-                <Eye className="w-6 h-6 text-white" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 shadow-lg">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Promedio General</p>
-                <p className="text-3xl font-bold text-gray-800">
-                  {Math.round(students.reduce((sum, s) => sum + s.averageScore, 0) / students.length)}%
-                </p>
-              </div>
-              <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
-                <TrendingUp className="w-6 h-6 text-white" />
+                <Users className="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
@@ -150,7 +119,21 @@ function StudentTracking() {
               <div>
                 <p className="text-sm text-gray-600 mb-1">Estudiantes Activos</p>
                 <p className="text-3xl font-bold text-gray-800">
-                  {students.filter(s => s.status === 'active').length}
+                  {students.filter(s => s.esta_activo).length}
+                </p>
+              </div>
+              <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
+                <Users className="w-6 h-6 text-white" />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl p-6 shadow-lg">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Puntos Recompensa</p>
+                <p className="text-3xl font-bold text-gray-800">
+                  {students.reduce((sum, s) => sum + s.puntos_recompensa, 0)}
                 </p>
               </div>
               <div className="w-12 h-12 bg-purple-500 rounded-xl flex items-center justify-center">
@@ -162,9 +145,9 @@ function StudentTracking() {
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600 mb-1">Total Estrellas</p>
+                <p className="text-sm text-gray-600 mb-1">Promedio de Puntos</p>
                 <p className="text-3xl font-bold text-gray-800">
-                  {students.reduce((sum, s) => sum + s.stars, 0)}
+                  {students.length > 0 ? Math.round(students.reduce((sum, s) => sum + s.puntos_recompensa, 0) / students.length) : 0}
                 </p>
               </div>
               <div className="w-12 h-12 bg-yellow-500 rounded-xl flex items-center justify-center">
@@ -182,7 +165,7 @@ function StudentTracking() {
                 <Search className="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  placeholder="Buscar estudiante..."
+                  placeholder="Buscar estudiante por nombre o usuario..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full pl-10 pr-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
@@ -219,65 +202,34 @@ function StudentTracking() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-3xl">
-                      {student.avatar}
+                      {getAvatarEmoji(student.nombre)}
                     </div>
                     
                     <div>
-                      <h3 className="text-xl font-bold text-gray-800">{student.name}</h3>
+                      <h3 className="text-xl font-bold text-gray-800">{student.nombre}</h3>
                       <div className="flex items-center gap-4 mt-1">
-                        <span className="text-gray-600">{student.grade}° Grado</span>
-                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(student.status)}`}>
-                          {student.status === 'active' ? 'Activo' : 'Inactivo'}
+                        <span className="text-gray-600">Usuario: {student.usuario}</span>
+                        <span className="text-gray-600">Código: {student.codigo_alumno}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800`}>
+                          {student.grado}° Grado
                         </span>
-                        <span className="text-gray-500 text-sm">Última actividad: {student.lastActivity}</span>
+                        <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(student.esta_activo)}`}>
+                          {student.esta_activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </div>
+                      <div className="text-sm text-gray-500 mt-1">
+                        Puntos de Recompensa: {student.puntos_recompensa}
                       </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-8">
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-gray-800">{student.exercisesCompleted}</div>
-                      <div className="text-sm text-gray-600">Ejercicios</div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className="text-2xl font-bold text-yellow-600">{student.stars}</div>
-                      <div className="text-sm text-gray-600">Estrellas</div>
-                    </div>
-                    
-                    <div className="text-center">
-                      <div className={`text-2xl font-bold ${getScoreColor(student.averageScore)}`}>
-                        {student.averageScore}%
-                      </div>
-                      <div className="text-sm text-gray-600">Promedio</div>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Progreso por materia */}
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {Object.entries(student.progress).map(([subject, score]) => (
-                    <div key={subject} className="bg-gray-50 rounded-xl p-4">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm font-semibold text-gray-700 capitalize">
-                          {subject === 'multiplicacion' ? 'Multiplicación' : 
-                           subject === 'division' ? 'División' : subject}
-                        </span>
-                        <span className={`text-sm font-bold ${getScoreColor(score)}`}>
-                          {score}%
-                        </span>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className={`h-2 rounded-full transition-all duration-500 ${
-                            score >= 90 ? 'bg-green-500' :
-                            score >= 80 ? 'bg-yellow-500' : 'bg-red-500'
-                          }`}
-                          style={{ width: `${score}%` }}
-                        ></div>
-                      </div>
-                    </div>
-                  ))}
+                  <button
+                    onClick={() => handleToggleStatus(student.id, student.esta_activo)}
+                    className={`px-4 py-2 rounded-xl text-white font-semibold flex items-center gap-2
+                      ${student.esta_activo ? 'bg-red-500 hover:bg-red-600' : 'bg-green-500 hover:bg-green-600'}
+                      transition-all`}
+                  >
+                    {student.esta_activo ? <><ToggleLeft className="w-5 h-5" /> Desactivar</> : <><ToggleRight className="w-5 h-5" /> Activar</>}
+                  </button>
                 </div>
               </div>
             ))}

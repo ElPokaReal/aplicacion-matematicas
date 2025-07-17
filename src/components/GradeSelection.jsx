@@ -1,24 +1,54 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Users, GraduationCap } from 'lucide-react';
-import { useProgress } from '../context/ProgressContext';
+import { useAuth } from '../context/AuthContext';
+import StudentService from '../services/StudentService';
 
 function GradeSelection() {
   const navigate = useNavigate();
-  const { progress } = useProgress();
+  const { studentData, token } = useAuth();
+  const [aggregatedProgress, setAggregatedProgress] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  // Verificar si hay un estudiante logueado
-  const currentStudent = JSON.parse(localStorage.getItem('currentStudent') || 'null');
-  
+  useEffect(() => {
+    const fetchAggregatedProgress = async () => {
+      if (!token || !studentData?.id) {
+        setLoading(false);
+        setError('No authentication token or student data found.');
+        return;
+      }
+      try {
+        setLoading(true);
+        const data = await StudentService.getAggregatedProgressByStudentAndGrade(studentData.id, token);
+        const progressMap = data.reduce((acc, item) => {
+          acc[item.grado] = {
+            completed: item.ejercicios_completados,
+            total: item.total_ejercicios,
+            stars: item.ejercicios_completados // Assuming 1 star per completed exercise
+          };
+          return acc;
+        }, {});
+        setAggregatedProgress(progressMap);
+      } catch (err) {
+        setError(err.message || 'Failed to load aggregated progress data.');
+        console.error('Error fetching aggregated progress data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAggregatedProgress();
+  }, [token, studentData]);
+
   const handleBackNavigation = () => {
-    // Si hay un estudiante logueado, ir a su dashboard
-    // Si no, ir al menú principal
-    if (currentStudent) {
+    if (studentData) {
       navigate('/estudiante');
     } else {
       navigate('/');
     }
   };
+
   const grades = [
     {
       id: '4',
@@ -47,29 +77,32 @@ function GradeSelection() {
   ];
 
   const getGradeProgress = (gradeId) => {
-    const gradeKey = `grade${gradeId}`;
-    const gradeProgress = progress[gradeKey];
-    if (typeof gradeProgress === 'object' && 'completed' in gradeProgress) {
-      return gradeProgress;
-    }
-    return { completed: 0, total: 0, stars: 0 };
+    return aggregatedProgress[gradeId] || { completed: 0, total: 0, stars: 0 };
   };
 
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando grados...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
+  }
+
   return (
-    <div className="min-h-screen p-4">
+    <div className="min-h-screen p-4 bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-6xl mx-auto">
         
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <button
             onClick={handleBackNavigation}
-            className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-white px-4 py-2 rounded-full hover:bg-white/30 transition-all"
+            className="flex items-center gap-2 bg-white/20 backdrop-blur-sm text-gray-800 px-4 py-2 rounded-full hover:bg-white/30 transition-all"
           >
             <ArrowLeft className="w-5 h-5" />
-            {currentStudent ? 'Mi Dashboard' : 'Inicio'}
+            {studentData ? 'Mi Dashboard' : 'Inicio'}
           </button>
           
-          <h1 className="text-4xl font-bold text-white text-center flex-1">
+          <h1 className="text-4xl font-bold text-gray-800 text-center flex-1">
             Selecciona tu Grado
           </h1>
           
@@ -89,10 +122,10 @@ function GradeSelection() {
                 className="bg-white rounded-2xl shadow-xl overflow-hidden transform hover:scale-105 transition-all duration-300 cursor-pointer"
                 onClick={() => navigate(`/ejercicios/${grade.id}`)}
               >
-                <div className={`bg-gradient-to-r ${grade.color} p-6 text-white`}>
+                <div className={`bg-gradient-to-r ${grade.color} p-6 text-gray-800`}>
                   <grade.icon className="w-12 h-12 mb-4" />
                   <h2 className="text-2xl font-bold mb-2">{grade.title}</h2>
-                  <p className="text-white/90">{grade.description}</p>
+                  <p className="text-gray-600">{grade.description}</p>
                 </div>
                 
                 <div className="p-6">
@@ -136,7 +169,7 @@ function GradeSelection() {
 
         {/* Call to Action */}
         <div className="text-center mt-12">
-          <p className="text-white/80 text-lg">
+          <p className="text-gray-600 text-lg">
             💡 ¡Elige tu grado y comienza a resolver ejercicios divertidos!
           </p>
         </div>

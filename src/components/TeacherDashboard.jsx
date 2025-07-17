@@ -1,11 +1,36 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, Users, BookOpen, BarChart3, Settings, MessageCircle, Award, TrendingUp, UserPlus } from 'lucide-react';
+import { LogOut, Users, BookOpen, BarChart3, TrendingUp, UserPlus, Award } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import TeacherService from '../services/TeacherService';
 
 function TeacherDashboard() {
   const navigate = useNavigate();
-  const { teacherData, logout } = useAuth();
+  const { teacherData, token, logout } = useAuth();
+  const [dashboardStats, setDashboardStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchDashboardData = async () => {
+      if (!token) {
+        setLoading(false);
+        setError('No authentication token found.');
+        return;
+      }
+      try {
+        const stats = await TeacherService.getDashboardStats(token);
+        setDashboardStats(stats);
+      } catch (err) {
+        setError('Failed to load dashboard data.');
+        console.error('Error fetching dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, [token]);
 
   const handleLogout = () => {
     logout();
@@ -44,11 +69,19 @@ function TeacherDashboard() {
   ];
 
   const quickStats = [
-    { label: 'Estudiantes Registrados', value: '24', icon: UserPlus, color: 'bg-emerald-500' },
-    { label: 'Estudiantes Activos', value: '21', icon: Users, color: 'bg-blue-500' },
-    { label: 'Ejercicios Creados', value: '156', icon: BookOpen, color: 'bg-green-500' },
-    { label: 'Promedio General', value: '87%', icon: TrendingUp, color: 'bg-purple-500' }
+    { label: 'Estudiantes Registrados', value: dashboardStats?.totalEstudiantes || '...', icon: UserPlus, color: 'bg-emerald-500' },
+    { label: 'Ejercicios Creados', value: dashboardStats?.totalEjercicios || '...', icon: BookOpen, color: 'bg-blue-500' },
+    { label: 'Logros Otorgados', value: dashboardStats?.totalLogrosOtorgados || '...', icon: Award, color: 'bg-green-500' },
+    { label: 'Recompensas Desbloqueadas', value: dashboardStats?.totalRecompensasDesbloqueadas || '...', icon: TrendingUp, color: 'bg-purple-500' }
   ];
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando panel...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-blue-50">
@@ -113,7 +146,7 @@ function TeacherDashboard() {
           ))}
         </div>
 
-        {/* Actividad reciente */}
+        {/* Actividad reciente (Static for now, backend implementation needed) */}
         <div className="bg-white rounded-2xl shadow-lg p-6">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Actividad Reciente</h2>
           

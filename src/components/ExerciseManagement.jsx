@@ -1,98 +1,145 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Edit, Trash2, Save, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import ExerciseService from '../services/ExerciseService';
 
 function ExerciseManagement() {
   const navigate = useNavigate();
-  const [exercises, setExercises] = useState([
-    { id: 1, grade: 4, subject: 'matematicas', type: 'Suma', question: '25 + 17 = ?', answer: 42, difficulty: 'Fácil' },
-    { id: 2, grade: 5, subject: 'matematicas', type: 'Multiplicación', question: '8 × 7 = ?', answer: 56, difficulty: 'Medio' },
-    { id: 3, grade: 6, subject: 'matematicas', type: 'Fracciones', question: '1/2 + 1/4 = ?', answer: 0.75, difficulty: 'Difícil' },
-    { id: 4, grade: 4, subject: 'geometria', type: 'Perímetro', question: 'Perímetro de un cuadrado de 5 cm de lado', answer: 20, difficulty: 'Fácil' },
-    { id: 5, grade: 5, subject: 'geometria', type: 'Área', question: 'Área de un rectángulo de 6×4 cm', answer: 24, difficulty: 'Medio' },
-    { id: 6, grade: 4, subject: 'problemas', type: 'Problema de Suma', question: 'Ana tiene 15 dulces y le dan 8 más. ¿Cuántos tiene?', answer: 23, difficulty: 'Fácil' }
-  ]);
-  
+  const { token } = useAuth();
+  const [exercises, setExercises] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingExercise, setEditingExercise] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState('all'); // New state for grade filter
+
   const [formData, setFormData] = useState({
-    grade: 4,
-    subject: 'matematicas',
-    type: 'Suma',
-    question: '',
-    answer: '',
-    difficulty: 'Fácil'
+    grado: 4,
+    tipo_operacion: 'Suma',
+    pregunta: '',
+    respuesta_correcta: '',
   });
 
-  const subjectTypes = {
-    matematicas: ['Suma', 'Resta', 'Multiplicación', 'División', 'Fracciones', 'Decimales', 'Porcentajes'],
-    geometria: ['Perímetro', 'Área', 'Ángulos', 'Figuras'],
-    problemas: ['Problema de Suma', 'Problema de Resta', 'Problema de Multiplicación', 'Problema de División', 'Problema de Fracciones', 'Problema de Porcentajes']
+  const operationTypes = {
+    'Suma': 'Suma',
+    'Resta': 'Resta',
+    'Multiplicación': 'Multiplicación',
+    'División': 'División',
+    'Fracciones': 'Fracciones',
+    'Decimales': 'Decimales',
+    'Porcentajes': 'Porcentajes',
+    'Perímetro': 'Perímetro',
+    'Área': 'Área',
+    'Ángulos': 'Ángulos',
+    'Figuras': 'Figuras',
+    'Problema de Suma': 'Problema de Suma',
+    'Problema de Resta': 'Problema de Resta',
+    'Problema de Multiplicación': 'Problema de Multiplicación',
+    'Problema de División': 'Problema de División',
+    'Problema de Fracciones': 'Problema de Fracciones',
+    'Problema de Porcentajes': 'Problema de Porcentajes'
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    const newExercise = {
-      id: editingExercise ? editingExercise.id : Date.now(),
-      ...formData,
-      answer: parseFloat(formData.answer)
-    };
+  useEffect(() => {
+    fetchExercises();
+  }, [token, selectedGradeFilter]);
 
-    if (editingExercise) {
-      setExercises(exercises.map(ex => ex.id === editingExercise.id ? newExercise : ex));
-    } else {
-      setExercises([...exercises, newExercise]);
+  const fetchExercises = async () => {
+    if (!token) {
+      setLoading(false);
+      setError('No authentication token found.');
+      return;
     }
+    try {
+      setLoading(true);
+      const data = await ExerciseService.getAllExercises(token, selectedGradeFilter === 'all' ? null : selectedGradeFilter);
+      setExercises(data);
+    } catch (err) {
+      setError('Failed to load exercises.');
+      console.error('Error fetching exercises:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-    setShowForm(false);
-    setEditingExercise(null);
-    setFormData({ grade: 4, subject: 'matematicas', type: 'Suma', question: '', answer: '', difficulty: 'Fácil' });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setLoading(true);
+
+    try {
+      const exerciseData = {
+        grado: formData.grado,
+        tipo_operacion: formData.tipo_operacion,
+        pregunta: formData.pregunta,
+        respuesta_correcta: formData.respuesta_correcta.toString(),
+      };
+
+      if (editingExercise) {
+        await ExerciseService.updateExercise(editingExercise.id, exerciseData, token);
+      } else {
+        await ExerciseService.createExercise(exerciseData, token);
+      }
+      setShowForm(false);
+      setEditingExercise(null);
+      setFormData({
+        grado: 4,
+        tipo_operacion: 'Suma',
+        pregunta: '',
+        respuesta_correcta: '',
+      });
+      fetchExercises(); // Refresh exercise list
+    } catch (err) {
+      setError(err.message || 'Error al guardar ejercicio.');
+      console.error('Error saving exercise:', err);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleEdit = (exercise) => {
     setEditingExercise(exercise);
     setFormData({
-      grade: exercise.grade,
-      subject: exercise.subject,
-      type: exercise.type,
-      question: exercise.question,
-      answer: exercise.answer.toString(),
-      difficulty: exercise.difficulty
+      grado: [4, 5, 6].includes(exercise.grado) ? exercise.grado : 4,
+      tipo_operacion: exercise.tipo_operacion,
+      pregunta: exercise.pregunta,
+      respuesta_correcta: exercise.respuesta_correcta.toString(),
     });
     setShowForm(true);
   };
 
-  const handleDelete = (id) => {
-    setExercises(exercises.filter(ex => ex.id !== id));
-  };
-
-  const getDifficultyColor = (difficulty) => {
-    switch (difficulty) {
-      case 'Fácil': return 'bg-green-100 text-green-800';
-      case 'Medio': return 'bg-yellow-100 text-yellow-800';
-      case 'Difícil': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
+  const handleDelete = async (id) => {
+    if (confirm('¿Estás seguro de que quieres eliminar este ejercicio?')) {
+      setError(null);
+      setLoading(true);
+      try {
+        await ExerciseService.deleteExercise(id, token);
+        fetchExercises(); // Refresh exercise list
+      } catch (err) {
+        setError(err.message || 'Error al eliminar ejercicio.');
+        console.error('Error deleting exercise:', err);
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
-  const getSubjectColor = (subject) => {
-    switch (subject) {
-      case 'matematicas': return 'bg-blue-100 text-blue-800';
-      case 'geometria': return 'bg-green-100 text-green-800';
-      case 'problemas': return 'bg-orange-100 text-orange-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
+  const getOperationColor = (type) => {
+    if (type.includes('Suma')) return 'bg-green-100 text-green-800';
+    if (type.includes('Resta')) return 'bg-red-100 text-red-800';
+    if (type.includes('Multiplicación')) return 'bg-blue-100 text-blue-800';
+    if (type.includes('División')) return 'bg-purple-100 text-purple-800';
+    return 'bg-gray-100 text-gray-800';
   };
 
-  const getSubjectIcon = (subject) => {
-    switch (subject) {
-      case 'matematicas': return '🔢';
-      case 'geometria': return '📐';
-      case 'problemas': return '🧩';
-      default: return '📚';
-    }
-  };
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center">Cargando ejercicios...</div>;
+  }
+
+  if (error) {
+    return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
+  }
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-blue-50">
@@ -112,7 +159,16 @@ function ExerciseManagement() {
           </div>
           
           <button
-            onClick={() => setShowForm(true)}
+            onClick={() => {
+              setShowForm(true);
+              setEditingExercise(null);
+              setFormData({
+                grado: 4,
+                tipo_operacion: 'Suma',
+                pregunta: '',
+                respuesta_correcta: '',
+              });
+            }}
             className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all"
           >
             <Plus className="w-5 h-5" />
@@ -120,37 +176,7 @@ function ExerciseManagement() {
           </button>
         </div>
 
-        {/* Estadísticas por materia */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          {['matematicas', 'geometria', 'problemas'].map((subject) => {
-            const subjectExercises = exercises.filter(ex => ex.subject === subject);
-            const subjectName = subject === 'matematicas' ? 'Matemáticas' : 
-                              subject === 'geometria' ? 'Geometría' : 'Problemas';
-            
-            return (
-              <div key={subject} className="bg-white rounded-2xl p-6 shadow-lg">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="text-3xl">{getSubjectIcon(subject)}</div>
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800">{subjectName}</h3>
-                    <p className="text-gray-600">{subjectExercises.length} ejercicios</p>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  {[4, 5, 6].map(grade => {
-                    const gradeCount = subjectExercises.filter(ex => ex.grade === grade).length;
-                    return (
-                      <div key={grade} className="flex justify-between text-sm">
-                        <span className="text-gray-600">{grade}° Grado:</span>
-                        <span className="font-semibold">{gradeCount}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+        {/* Header */}
 
         {/* Formulario */}
         {showForm && (
@@ -164,7 +190,12 @@ function ExerciseManagement() {
                   onClick={() => {
                     setShowForm(false);
                     setEditingExercise(null);
-                    setFormData({ grade: 4, subject: 'matematicas', type: 'Suma', question: '', answer: '', difficulty: 'Fácil' });
+                    setFormData({
+                      grado: 4,
+                      tipo_operacion: 'Suma',
+                      pregunta: '',
+                      respuesta_correcta: '',
+                    });
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
@@ -176,8 +207,8 @@ function ExerciseManagement() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Grado</label>
                   <select
-                    value={formData.grade}
-                    onChange={(e) => setFormData({ ...formData, grade: parseInt(e.target.value) })}
+                    value={formData.grado}
+                    onChange={(e) => setFormData({ ...formData, grado: parseInt(e.target.value) })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   >
                     <option value={4}>Cuarto Grado</option>
@@ -187,33 +218,13 @@ function ExerciseManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Materia</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo de Operación</label>
                   <select
-                    value={formData.subject}
-                    onChange={(e) => {
-                      const newSubject = e.target.value;
-                      setFormData({ 
-                        ...formData, 
-                        subject: newSubject,
-                        type: subjectTypes[newSubject][0]
-                      });
-                    }}
+                    value={formData.tipo_operacion}
+                    onChange={(e) => setFormData({ ...formData, tipo_operacion: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                   >
-                    <option value="matematicas">🔢 Matemáticas</option>
-                    <option value="geometria">📐 Geometría</option>
-                    <option value="problemas">🧩 Problemas</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Tipo</label>
-                  <select
-                    value={formData.type}
-                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
-                  >
-                    {subjectTypes[formData.subject].map((type) => (
+                    {Object.keys(operationTypes).map((type) => (
                       <option key={type} value={type}>{type}</option>
                     ))}
                   </select>
@@ -222,8 +233,8 @@ function ExerciseManagement() {
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Pregunta</label>
                   <textarea
-                    value={formData.question}
-                    onChange={(e) => setFormData({ ...formData, question: e.target.value })}
+                    value={formData.pregunta}
+                    onChange={(e) => setFormData({ ...formData, pregunta: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                     placeholder="Ej: ¿Cuál es el perímetro de un cuadrado de 5 cm de lado?"
                     rows={3}
@@ -232,33 +243,26 @@ function ExerciseManagement() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Respuesta</label>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Respuesta Correcta</label>
                   <input
-                    type="number"
-                    step="0.01"
-                    value={formData.answer}
-                    onChange={(e) => setFormData({ ...formData, answer: e.target.value })}
+                    type="text" // Changed to text to allow non-numeric answers if needed
+                    value={formData.respuesta_correcta}
+                    onChange={(e) => setFormData({ ...formData, respuesta_correcta: e.target.value })}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
                     placeholder="20"
                     required
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Dificultad</label>
-                  <select
-                    value={formData.difficulty}
-                    onChange={(e) => setFormData({ ...formData, difficulty: e.target.value })}
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
-                  >
-                    <option value="Fácil">Fácil</option>
-                    <option value="Medio">Medio</option>
-                    <option value="Difícil">Difícil</option>
-                  </select>
-                </div>
+                {error && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl">
+                    {error}
+                  </div>
+                )}
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 rounded-xl font-bold hover:shadow-lg transition-all flex items-center justify-center gap-2"
                 >
                   <Save className="w-5 h-5" />
@@ -268,6 +272,24 @@ function ExerciseManagement() {
             </div>
           </div>
         )}
+
+        {/* Filtro de Grado */}
+        <div className="bg-white rounded-2xl shadow-lg p-6 mb-8">
+          <div className="flex justify-end">
+            <div className="md:w-48">
+              <select
+                value={selectedGradeFilter}
+                onChange={(e) => setSelectedGradeFilter(e.target.value)}
+                className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:outline-none"
+              >
+                <option value="all">Todos los grados</option>
+                <option value="4">Cuarto Grado</option>
+                <option value="5">Quinto Grado</option>
+                <option value="6">Sexto Grado</option>
+              </select>
+            </div>
+          </div>
+        </div>
 
         {/* Lista de ejercicios */}
         <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -280,32 +302,23 @@ function ExerciseManagement() {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Grado</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Materia</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Tipo</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Tipo de Operación</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Pregunta</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Respuesta</th>
-                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Dificultad</th>
+                  <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Respuesta Correcta</th>
                   <th className="px-6 py-4 text-left text-sm font-semibold text-gray-700">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {exercises.map((exercise) => (
                   <tr key={exercise.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 text-sm text-gray-800">{exercise.grade}°</td>
+                    <td className="px-6 py-4 text-sm text-gray-800">{`${exercise.grado}°`}</td>
                     <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getSubjectColor(exercise.subject)}`}>
-                        {getSubjectIcon(exercise.subject)} {exercise.subject === 'matematicas' ? 'Matemáticas' : 
-                         exercise.subject === 'geometria' ? 'Geometría' : 'Problemas'}
+                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getOperationColor(exercise.tipo_operacion)}`}>
+                        {exercise.tipo_operacion}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-800">{exercise.type}</td>
-                    <td className="px-6 py-4 text-sm text-gray-800 max-w-xs truncate">{exercise.question}</td>
-                    <td className="px-6 py-4 text-sm text-gray-800 font-bold">{exercise.answer}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 rounded-full text-xs font-semibold ${getDifficultyColor(exercise.difficulty)}`}>
-                        {exercise.difficulty}
-                      </span>
-                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-800 max-w-xs truncate">{exercise.pregunta}</td>
+                    <td className="px-6 py-4 text-sm text-gray-800 font-bold">{exercise.respuesta_correcta}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-2">
                         <button

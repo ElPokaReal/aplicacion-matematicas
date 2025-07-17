@@ -1,32 +1,64 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Trophy, TrendingUp, Star, Target, Users, LogOut } from 'lucide-react';
-import { useProgress } from '../context/ProgressContext';
+import { useAuth } from '../context/AuthContext';
+import StudentService from '../services/StudentService';
+import RewardService from '../services/RewardService';
 
 function StudentDashboard() {
   const navigate = useNavigate();
-  const { progress } = useProgress();
-  const [currentStudent, setCurrentStudent] = useState(null);
+  const { studentData, token, logout } = useAuth();
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [unlockedRewardsCount, setUnlockedRewardsCount] = useState(0);
+  const [totalExercisesCompleted, setTotalExercisesCompleted] = useState(0);
 
   useEffect(() => {
-    const studentData = localStorage.getItem('currentStudent');
-    if (studentData) {
-      setCurrentStudent(JSON.parse(studentData));
-    } else {
-      // Si no hay estudiante logueado, redirigir al menú principal
-      navigate('/');
-    }
-  }, [navigate]);
+    const fetchData = async () => {
+      if (!token || !studentData?.id) {
+        setLoading(false);
+        setError('No authentication token or student data found.');
+        return;
+      }
+      try {
+        // Fetch unlocked rewards count
+        const unlocked = await RewardService.getUnlockedRewardsByStudent(studentData.id, token);
+        setUnlockedRewardsCount(unlocked.length);
+
+        // Fetch total exercises completed (assuming a new endpoint for this)
+        // For now, I'll use a placeholder or derive from progress if available
+        // This would ideally come from a backend endpoint like /api/progreso-estudiantes/countCompleted
+        const progressResponse = await StudentService.getStudentProgress(studentData.id, token);
+        setTotalExercisesCompleted(progressResponse.length); // Assuming each entry is a completed exercise
+
+      } catch (err) {
+        setError(err.message || 'Failed to load student dashboard data.');
+        console.error('Error fetching student dashboard data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [token, studentData]);
 
   const handleLogout = () => {
-    localStorage.removeItem('currentStudent');
+    logout();
     navigate('/');
   };
 
-  if (!currentStudent) {
+  if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white text-xl">Cargando...</div>
+        <div className="text-gray-800 text-xl">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center text-red-500">
+        Error: {error}
       </div>
     );
   }
@@ -65,10 +97,10 @@ function StudentDashboard() {
   ];
 
   const quickStats = [
-    { label: 'Estrellas', value: progress.totalStars, icon: '⭐', color: 'bg-yellow-400' },
-    { label: 'Ejercicios', value: progress.grade4.completed + progress.grade5.completed + progress.grade6.completed, icon: '📝', color: 'bg-blue-400' },
-    { label: 'Premios', value: progress.rewards.length, icon: '🏆', color: 'bg-purple-400' },
-    { label: 'Nivel', value: progress.totalStars < 10 ? 'Principiante' : progress.totalStars < 50 ? 'Intermedio' : 'Avanzado', icon: '🎯', color: 'bg-green-400' }
+    { label: 'Estrellas', value: studentData?.puntos_recompensa || 0, icon: '⭐', color: 'bg-yellow-400' },
+    { label: 'Ejercicios', value: totalExercisesCompleted, icon: '📝', color: 'bg-blue-400' },
+    { label: 'Premios', value: unlockedRewardsCount, icon: '🏆', color: 'bg-purple-400' },
+    { label: 'Nivel', value: (studentData?.puntos_recompensa || 0) < 10 ? 'Principiante' : (studentData?.puntos_recompensa || 0) < 50 ? 'Intermedio' : 'Avanzado', icon: '🎯', color: 'bg-green-400' }
   ];
 
   return (
@@ -94,13 +126,12 @@ function StudentDashboard() {
           
           <div className="text-center">
             <div className="flex items-center justify-center gap-4 mb-2">
-              <div className="text-6xl">{currentStudent.avatar}</div>
               <div>
                 <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                  ¡Hola, {currentStudent.name.split(' ')[0]}! 👋
+                  ¡Hola, {studentData?.nombre?.split(' ')[0]}! 👋
                 </h1>
                 <p className="text-xl text-gray-700">
-                  {currentStudent.grade}° Grado • Código: {currentStudent.code}
+                  {studentData?.grado}° Grado • Código: {studentData?.codigo_alumno}
                 </p>
               </div>
             </div>
@@ -155,7 +186,7 @@ function StudentDashboard() {
                     <div className="flex items-center gap-1">
                       <Star className="w-5 h-5 text-yellow-500" />
                       <span className="font-bold text-gray-700">
-                        {subject.id === 'matematicas' ? progress.totalStars : Math.floor(progress.totalStars / 3)}
+                        {studentData?.puntos_recompensa || 0}
                       </span>
                     </div>
                   </div>
@@ -206,7 +237,7 @@ function StudentDashboard() {
         <div className="text-center mt-8 bg-gradient-to-r from-pink-300 to-purple-300 rounded-3xl p-8 shadow-xl">
           <div className="text-6xl mb-4">🌈</div>
           <h3 className="text-2xl font-bold text-white mb-2">
-            ¡{currentStudent.name.split(' ')[0]}, eres increíble! 🌟
+            ¡{studentData?.nombre?.split(' ')[0]}, eres increíble! 🌟
           </h3>
           <p className="text-white/90 text-lg">
             Cada día que practicas te vuelves más inteligente. ¡Sigue así!

@@ -17,12 +17,12 @@ function TeacherLogin() {
     setLoading(true);
     setError('');
 
-    const success = login(email, password);
+    const success = await login({ email, password }, 'teacher');
     
     if (success) {
       navigate('/maestro/dashboard');
     } else {
-      setError('Credenciales incorrectas. Intenta con: maestro@escuela.com / maestro123');
+      setError('Credenciales incorrectas. Por favor, verifica tu email y contraseña.');
     }
     
     setLoading(false);
@@ -125,8 +125,8 @@ function TeacherLogin() {
           <div className="mt-6 p-4 bg-blue-50 rounded-xl">
             <h3 className="font-semibold text-blue-800 mb-2">Credenciales de Demostración:</h3>
             <p className="text-sm text-blue-700">
-              <strong>Email:</strong> maestro@escuela.com<br />
-              <strong>Contraseña:</strong> maestro123
+              <strong>Email:</strong> admin@matematicas.com<br />
+              <strong>Contraseña:</strong> admin123
             </p>
           </div>
         </div>
