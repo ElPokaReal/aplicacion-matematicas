@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Trophy, Star, Award, Crown, Zap } from 'lucide-react';
+import { ArrowLeft, Star, Award, Crown, Zap, Trophy, Medal, Gift, Gem, Smile, ThumbsUp } from 'lucide-react';
+import { FaTrophy, FaGift, FaStar, FaCheck, FaLock, FaMedal } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import RewardService from '../services/RewardService';
+import StudentService from '../services/StudentService';
 
 export default function RewardsPage() {
   const navigate = useNavigate();
@@ -11,9 +13,24 @@ export default function RewardsPage() {
   const [unlockedRewards, setUnlockedRewards] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [achievements, setAchievements] = useState([]);
+  const [activeTab, setActiveTab] = useState('rewards'); // 'rewards' o 'achievements'
 
   const currentUserId = studentData?.id || teacherData?.id;
   const isStudent = !!studentData;
+
+  const iconMap = {
+    Star,
+    Award,
+    Crown,
+    Zap,
+    Trophy,
+    Medal,
+    Gift,
+    Gem,
+    Smile,
+    ThumbsUp
+  };
 
   useEffect(() => {
     const fetchRewards = async () => {
@@ -30,6 +47,9 @@ export default function RewardsPage() {
         if (isStudent) {
           const studentUnlockedRewards = await RewardService.getUnlockedRewardsByStudent(currentUserId, token);
           setUnlockedRewards(studentUnlockedRewards.map(ur => ur.recompensa.id));
+          // Obtener logros
+          const studentAchievements = await StudentService.getAchievementsByStudent(currentUserId, token);
+          setAchievements(studentAchievements.map(a => a.logro));
         }
 
       } catch (err) {
@@ -97,7 +117,7 @@ export default function RewardsPage() {
           </button>
           
           <h1 className="text-4xl font-bold text-gray-800 text-center flex-1">
-            🏆 Mis Premios
+            <FaTrophy className="inline mr-2" /> Mis Premios
           </h1>
           
           <div className="w-20"></div>
@@ -118,56 +138,99 @@ export default function RewardsPage() {
           </div>
         )}
 
-        {/* All Rewards */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
-            🎁 Recompensas Disponibles
-          </h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {rewards.map((reward) => {
-              const isUnlocked = unlockedRewards.includes(reward.id);
-              
-              return (
-                <div
-                  key={reward.id}
-                  className={`bg-white rounded-2xl p-6 shadow-xl transition-all ${
-                    isUnlocked ? 'ring-4 ring-green-400' : 'opacity-60'
-                  }`}
-                >
-                  <div className="flex items-center gap-3 mb-4">
-                    <img src={reward.icono_url || 'https://via.placeholder.com/48'} alt={reward.nombre} className="w-12 h-12 rounded-full" />
-                    <div>
-                      <h3 className="text-xl font-bold text-gray-800">{reward.nombre}</h3>
-                      <p className="text-gray-600 text-sm">{reward.descripcion}</p>
+        {/* Tabs */}
+        {isStudent && (
+          <div className="flex justify-center mb-8">
+            <button
+              className={`px-6 py-2 rounded-t-lg font-bold text-lg transition-all border-b-4 ${activeTab === 'rewards' ? 'border-blue-500 text-blue-700 bg-white' : 'border-transparent text-gray-500 bg-gray-100'}`}
+              onClick={() => setActiveTab('rewards')}
+            >
+              Recompensas
+            </button>
+            <button
+              className={`px-6 py-2 rounded-t-lg font-bold text-lg transition-all border-b-4 ${activeTab === 'achievements' ? 'border-yellow-500 text-yellow-700 bg-white' : 'border-transparent text-gray-500 bg-gray-100'}`}
+              onClick={() => setActiveTab('achievements')}
+            >
+              Logros
+            </button>
+          </div>
+        )}
+
+        {/* Tab Content */}
+        {activeTab === 'rewards' && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+              <FaGift className="inline mr-2" /> Recompensas Disponibles
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {rewards.map((reward) => {
+                const isUnlocked = unlockedRewards.includes(reward.id);
+                const Icon = iconMap[reward.icono_nombre] || Star;
+                return (
+                  <div
+                    key={reward.id}
+                    className={`bg-white rounded-2xl p-6 shadow-xl transition-all ${
+                      isUnlocked ? 'ring-4 ring-green-400' : 'opacity-60'
+                    }`}
+                  >
+                    <div className="flex items-center gap-3 mb-4">
+                      <Icon className="w-12 h-12 text-blue-500" />
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800">{reward.nombre}</h3>
+                        <p className="text-gray-600 text-sm">{reward.descripcion}</p>
+                      </div>
+                    </div>
+                    <div className="text-center">
+                      {isUnlocked ? (
+                        <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
+                          <FaCheck className="inline mr-1" /> DESBLOQUEADO
+                        </span>
+                      ) : (
+                        <button
+                          onClick={() => handleUnlockReward(reward.id)}
+                          disabled={!isStudent || (studentData?.puntos_recompensa || 0) < reward.costo_puntos}
+                          className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <FaLock className="inline mr-1" /> {reward.costo_puntos} Puntos
+                        </button>
+                      )}
                     </div>
                   </div>
-                  
-                  <div className="text-center">
-                    {isUnlocked ? (
-                      <span className="bg-green-100 text-green-800 px-3 py-1 rounded-full text-xs font-bold">
-                        ✅ DESBLOQUEADO
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => handleUnlockReward(reward.id)}
-                        disabled={!isStudent || (studentData?.puntos_recompensa || 0) < reward.costo_en_puntos}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-full text-sm font-bold hover:bg-blue-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        🔒 {reward.costo_en_puntos} Puntos
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
+        )}
+        {activeTab === 'achievements' && isStudent && (
+          <div className="mb-8">
+            <h2 className="text-2xl font-bold text-gray-800 mb-6 text-center">
+              <FaMedal className="inline mr-2" /> Mis Logros
+            </h2>
+            {achievements.length === 0 ? (
+              <div className="text-center text-gray-500">Aún no has obtenido logros. ¡Sigue participando!</div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {achievements.map((ach) => {
+                  const Icon = iconMap[ach.icono_nombre] || Award;
+                  return (
+                    <div key={ach.id} className="bg-white rounded-2xl p-6 shadow-xl flex items-center gap-4">
+                      <Icon className="w-12 h-12 text-yellow-500" />
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-800">{ach.nombre}</h3>
+                        <p className="text-gray-600 text-sm">{ach.descripcion}</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Encouragement */}
         <div className="text-center mt-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6">
           <h3 className="text-2xl font-bold text-gray-800 mb-2">
-            ¡Sigue coleccionando premios! 🎉
+            ¡Sigue coleccionando premios! <FaTrophy className="inline ml-2" />
           </h3>
           <p className="text-gray-600 text-lg">
             Cada ejercicio que resuelves te acerca a obtener más recompensas increíbles.

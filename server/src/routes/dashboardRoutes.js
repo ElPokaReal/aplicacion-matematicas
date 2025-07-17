@@ -8,5 +8,6 @@ router.get('/stats', verifyToken, authorizeRoles(['maestro']), dashboardControll
 router.get('/exercise-performance', verifyToken, authorizeRoles(['maestro']), dashboardController.getExercisePerformanceStats);
 router.get('/student-performance', verifyToken, authorizeRoles(['maestro']), dashboardController.getStudentPerformanceStats);
 router.get('/achievement-reward-distribution', verifyToken, authorizeRoles(['maestro']), dashboardController.getAchievementRewardDistribution);
+router.get('/recent-activity', verifyToken, authorizeRoles(['maestro']), dashboardController.getRecentActivity);
 
 module.exports = router;

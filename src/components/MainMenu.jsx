@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { GraduationCap, Users, BookOpen, Star, ArrowRight, Eye, EyeOff } from 'lucide-react';
+import { FaStar, FaGamepad, FaTrophy, FaChartBar, FaUserCircle, FaKey, FaLightbulb, FaSmile } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 
 function MainMenu() {
@@ -25,7 +26,7 @@ function MainMenu() {
         {/* Logo y Título Principal */}
         <div className="text-center mb-8 md:mb-12">
           <h1 className="text-4xl md:text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-2 md:mb-4 drop-shadow-lg">
-            🌟 MateAventura
+            MateAventuras
           </h1>
           <p className="text-xl md:text-3xl text-gray-700 font-medium mb-1 md:mb-2">
             ¡Descubre la magia de las matemáticas!
@@ -50,7 +51,7 @@ function MainMenu() {
               </p>
               <button
                 onClick={() => setShowStudentLogin(true)}
-                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all flex items-center justify-center gap-2 md:gap-3"
+                className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all flex items-center justify-center gap-2 md:gap-3 drop-shadow"
               >
                 <Users className="w-5 h-5 md:w-6 md:h-6" />
                 Acceder como Estudiante
@@ -71,7 +72,7 @@ function MainMenu() {
               </p>
               <button
                 onClick={() => navigate('/maestro/login')}
-                className="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all flex items-center justify-center gap-2 md:gap-3"
+                className="w-full bg-gradient-to-r from-green-500 to-teal-600 text-white py-3 md:py-4 rounded-xl text-lg md:text-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all flex items-center justify-center gap-2 md:gap-3 drop-shadow"
               >
                 <GraduationCap className="w-5 h-5 md:w-6 md:h-6" />
                 Acceder como Maestro
@@ -85,18 +86,18 @@ function MainMenu() {
         <div className="text-center bg-white/60 backdrop-blur-sm rounded-2xl p-4 md:p-6 max-w-3xl mx-auto w-full">
           <h3 className="text-xl md:text-2xl font-bold text-gray-800 mb-3 md:mb-4">✨ ¿Qué puedes hacer en MateAventura?</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 text-center">
-            <div className="p-3 md:p-4">
-              <div className="text-3xl md:text-4xl mb-1 md:mb-2">🎮</div>
+            <div className="p-3 md:p-4 flex flex-col items-center">
+              <FaGamepad className="text-indigo-600 mb-2" size={40} />
               <p className="font-semibold text-gray-700 text-sm md:text-base">Juegos Educativos</p>
               <p className="text-xs md:text-sm text-gray-600">Aprende matemáticas jugando</p>
             </div>
-            <div className="p-3 md:p-4">
-              <div className="text-3xl md:text-4xl mb-1 md:mb-2">🏆</div>
+            <div className="p-3 md:p-4 flex flex-col items-center">
+              <FaTrophy className="text-yellow-600 mb-2" size={40} />
               <p className="font-semibold text-gray-700 text-sm md:text-base">Premios y Medallas</p>
               <p className="text-xs md:text-sm text-gray-600">Gana recompensas por tu esfuerzo</p>
             </div>
-            <div className="p-3 md:p-4">
-              <div className="text-3xl md:text-4xl mb-1 md:mb-2">📊</div>
+            <div className="p-3 md:p-4 flex flex-col items-center">
+              <FaChartBar className="text-purple-600 mb-2" size={40} />
               <p className="font-semibold text-gray-700 text-sm md:text-base">Seguimiento</p>
               <p className="text-xs md:text-sm text-gray-600">Ve tu progreso en tiempo real</p>
             </div>
@@ -147,7 +148,9 @@ function StudentLoginModal({ onClose, onSuccess, login }) {
           <div className="w-16 h-16 md:w-20 md:h-20 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-3 md:mb-4">
             <Users className="w-8 h-8 md:w-10 md:h-10 text-white" />
           </div>
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-1 md:mb-2">¡Hola Estudiante! 👋</h2>
+          <h2 className="text-2xl md:text-3xl font-bold text-gray-800 mb-1 md:mb-2">
+            ¡Hola Estudiante! <FaSmile className="inline ml-2" />
+          </h2>
           <p className="text-gray-600 text-sm md:text-base">Ingresa tu código especial para entrar</p>
         </div>
 
@@ -155,7 +158,7 @@ function StudentLoginModal({ onClose, onSuccess, login }) {
         <form onSubmit={handleSubmit} className="space-y-4 md:space-y-6">
           <div>
             <label className="block text-base md:text-lg font-bold text-gray-700 mb-2 md:mb-3 text-center">
-              🔑 Mi Código Especial
+              <FaKey className="inline mr-2" /> Mi Código Especial
             </label>
             <input
               type="text"
@@ -167,7 +170,7 @@ function StudentLoginModal({ onClose, onSuccess, login }) {
               required
             />
             <p className="text-xs md:text-sm text-gray-500 text-center mt-2">
-              💡 Tu maestro te dio este código especial
+              <FaLightbulb className="inline mr-2" /> Tu maestro te dio este código especial
             </p>
           </div>
 
@@ -182,7 +185,7 @@ function StudentLoginModal({ onClose, onSuccess, login }) {
             <button
               type="submit"
               disabled={loading || !codigo_alumno}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 md:py-4 rounded-2xl text-lg md:text-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 md:gap-3"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 md:py-4 rounded-2xl text-lg md:text-xl font-bold hover:shadow-lg transform hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 md:gap-3 drop-shadow"
             >
               {loading ? (
                 <>
@@ -211,13 +214,13 @@ function StudentLoginModal({ onClose, onSuccess, login }) {
         <div className="mt-4 md:mt-6 p-3 md:p-4 bg-blue-50 rounded-2xl">
           <h3 className="font-bold text-blue-800 mb-2 text-center text-sm md:text-base">🎮 Códigos de Prueba:</h3>
           <div className="grid grid-cols-2 gap-2 text-xs md:text-sm">
-            <div className="text-center">
-              <div className="text-base md:text-lg">👧</div>
+            <div className="text-center flex flex-col items-center">
+              <FaUserCircle className="text-indigo-600 mb-1" size={32} />
               <div className="font-bold text-blue-700 text-xs md:text-sm">ANA2024</div>
               <div className="text-blue-600 text-xs"></div>
             </div>
-            <div className="text-center">
-              <div className="text-base md:text-lg">👦</div>
+            <div className="text-center flex flex-col items-center">
+              <FaUserCircle className="text-indigo-600 mb-1" size={32} />
               <div className="font-bold text-blue-700 text-xs md:text-sm">CARLOS2024</div>
               <div className="text-blue-600 text-xs"></div>
             </div>

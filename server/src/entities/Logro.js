@@ -26,7 +26,7 @@ module.exports = new EntitySchema({
             type: "int",
             nullable: true
         },
-        icono_url: {
+        icono_nombre: {
             type: "varchar",
             nullable: true
         },
@@ -37,6 +37,15 @@ module.exports = new EntitySchema({
         fecha_creacion: {
             type: "timestamp",
             default: () => "CURRENT_TIMESTAMP"
+        }
+    },
+    relations: {
+        maestro: {
+            target: "Maestro",
+            type: "many-to-one",
+            joinColumn: { name: "maestro_id" },
+            onDelete: "CASCADE",
+            onUpdate: "CASCADE"
         }
     }
 });

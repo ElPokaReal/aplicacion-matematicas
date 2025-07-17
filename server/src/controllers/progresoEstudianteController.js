@@ -87,6 +87,36 @@ exports.createProgresoEstudiante = async (req, res) => {
             await checkAndUnlockRewards(estudiante);
         }
 
+        // Lógica: Si la respuesta es correcta, verificar si el estudiante completó todos los ejercicios del grado
+        if (es_correcta) {
+            const ejercicioGrado = ejercicio.grado;
+            // 1. Obtener todos los ejercicios de ese grado
+            const ejercicioRepository = AppDataSource.getRepository(Ejercicio);
+            const totalEjercicios = await ejercicioRepository.count({ where: { grado: ejercicioGrado } });
+            // 2. Obtener IDs de ejercicios completados correctamente por el estudiante en ese grado
+            const progresoRepository = AppDataSource.getRepository(ProgresoEstudiante);
+            const completados = await progresoRepository
+                .createQueryBuilder('progreso')
+                .leftJoin('progreso.ejercicio', 'ejercicio')
+                .select('ejercicio.id', 'ejercicioId')
+                .where('progreso.estudiante.id = :estudianteId', { estudianteId: estudiante.id })
+                .andWhere('progreso.es_correcta = true')
+                .andWhere('ejercicio.grado = :grado', { grado: ejercicioGrado })
+                .groupBy('ejercicio.id')
+                .getRawMany();
+            if (completados.length === totalEjercicios && totalEjercicios > 0) {
+                // Registrar evento (puede repetirse si se agregan nuevos ejercicios)
+                const EventoDashboard = require('../entities/EventoDashboard');
+                const eventoRepository = AppDataSource.getRepository(EventoDashboard);
+                await eventoRepository.save({
+                    tipo: 'completo_grado',
+                    descripcion: `El estudiante ${estudiante.nombre} completó todos los ejercicios del grado ${ejercicioGrado}`,
+                    estudiante: { id: estudiante.id },
+                    grado: ejercicioGrado
+                });
+            }
+        }
+
         res.status(201).json({ message: 'Progreso registrado exitosamente.', progreso: nuevoProgreso, estudiante: estudiante });
 
     } catch (error) {
@@ -233,21 +263,43 @@ exports.getCompletedExercisesByStudentAndGrade = async (req, res) => {
 exports.getAggregatedProgressByStudentAndGrade = async (req, res) => {
     const { studentId } = req.params;
     try {
+        const ejercicioRepository = AppDataSource.getRepository(Ejercicio);
         const progresoRepository = AppDataSource.getRepository(ProgresoEstudiante);
 
-        const aggregatedProgress = await progresoRepository
-            .createQueryBuilder('progreso')
-            .leftJoin('progreso.ejercicio', 'ejercicio')
+        // 1. Obtener todos los grados y el total de ejercicios por grado
+        const ejerciciosPorGrado = await ejercicioRepository
+            .createQueryBuilder('ejercicio')
             .select('ejercicio.grado', 'grado')
-            .addSelect('COUNT(DISTINCT ejercicio.id)', 'total_ejercicios')
-            .addSelect('SUM(CASE WHEN progreso.es_correcta = TRUE THEN 1 ELSE 0 END)', 'ejercicios_completados')
-            .where('progreso.estudiante.id = :studentId', { studentId: parseInt(studentId) })
+            .addSelect('COUNT(ejercicio.id)', 'total_ejercicios')
             .groupBy('ejercicio.grado')
             .getRawMany();
 
-        res.status(200).json(aggregatedProgress);
+        // 2. Obtener ejercicios completados por el estudiante por grado
+        const completadosPorGrado = await progresoRepository
+            .createQueryBuilder('progreso')
+            .leftJoin('progreso.ejercicio', 'ejercicio')
+            .select('ejercicio.grado', 'grado')
+            .addSelect('COUNT(DISTINCT ejercicio.id)', 'ejercicios_completados')
+            .where('progreso.estudiante.id = :studentId', { studentId: parseInt(studentId) })
+            .andWhere('progreso.es_correcta = TRUE')
+            .groupBy('ejercicio.grado')
+            .getRawMany();
+
+        // 3. Unir ambos resultados
+        const completadosMap = {};
+        completadosPorGrado.forEach(row => {
+            completadosMap[row.grado] = parseInt(row.ejercicios_completados, 10);
+        });
+
+        const result = ejerciciosPorGrado.map(row => ({
+            grado: row.grado,
+            total_ejercicios: parseInt(row.total_ejercicios, 10),
+            ejercicios_completados: completadosMap[row.grado] || 0
+        }));
+
+        res.status(200).json(result);
     } catch (error) {
-        console.error(`Error al obtener progreso agregado por estudiante y grado ${estudiante_id}:`, error);
+        console.error(`Error al obtener progreso agregado por estudiante y grado ${studentId}:`, error);
         res.status(500).json({ message: 'Error interno del servidor al obtener progreso agregado.' });
     }
 };

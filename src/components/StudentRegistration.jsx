@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Plus, Edit, Trash2, Save, X, Users, UserPlus, Search, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, Plus, Edit, Trash2, Save, X, Users, UserPlus, Search } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import StudentService from '../services/StudentService';
+import { showSuccessToast, showErrorToast } from '../utils/toastHelper';
+import { FaUserCircle } from 'react-icons/fa';
 
 function StudentRegistration() {
   const navigate = useNavigate();
@@ -13,12 +15,13 @@ function StudentRegistration() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedGrade, setSelectedGrade] = useState('all');
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [showPassword, setShowPassword] = useState(false);
+  // Ya se usan showSuccessToast y showErrorToast en todas las acciones principales. Eliminar setError y el renderizado de error local si no es necesario.
 
+  // Agregar password al estado inicial
   const [formData, setFormData] = useState({
     nombre: '',
     usuario: '',
+    password: '',
     codigo_alumno: '',
     grado: 4,
     maestro_id: teacherData?.id,
@@ -29,17 +32,12 @@ function StudentRegistration() {
   }, [token]);
 
   const fetchStudents = async () => {
-    if (!token) {
-      setLoading(false);
-      setError('No authentication token found.');
-      return;
-    }
     try {
       setLoading(true);
       const data = await StudentService.getAllStudents(token);
       setStudents(data);
     } catch (err) {
-      setError('Failed to load students.');
+      showErrorToast('No se pudieron cargar los estudiantes.');
       console.error('Error fetching students:', err);
     } finally {
       setLoading(false);
@@ -48,33 +46,22 @@ function StudentRegistration() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
     setLoading(true);
-
     try {
+      const studentData = { ...formData, maestro_id: teacherData.id };
       if (editingStudent) {
-        await StudentService.updateStudent(editingStudent.id, {
-          nombre: formData.nombre,
-          usuario: formData.usuario,
-          codigo_alumno: formData.codigo_alumno,
-          grado: formData.grado,
-          maestro_id: teacherData.id,
-        }, token);
+        await StudentService.updateStudent(editingStudent.id, studentData, token);
+        showSuccessToast('¡Estudiante actualizado con éxito!');
       } else {
-        await StudentService.registerStudent(formData, token);
+        await StudentService.registerStudent(studentData, token);
+        showSuccessToast('¡Estudiante registrado con éxito!');
       }
       setShowForm(false);
       setEditingStudent(null);
-      setFormData({
-        nombre: '',
-        usuario: '',
-        codigo_alumno: '',
-        grado: 4,
-        maestro_id: teacherData?.id,
-      });
-      fetchStudents(); // Refresh student list
+      setFormData({ nombre: '', usuario: '', password: '', codigo_alumno: '', grado: 4, maestro_id: teacherData?.id });
+      fetchStudents();
     } catch (err) {
-      setError(err.message || 'Error al guardar estudiante.');
+      showErrorToast(err.message || 'Error al guardar el estudiante.');
       console.error('Error saving student:', err);
     } finally {
       setLoading(false);
@@ -86,7 +73,7 @@ function StudentRegistration() {
     setFormData({
       nombre: student.nombre,
       usuario: student.usuario,
-      password: '', // Password should not be pre-filled for security
+      codigo_alumno: student.codigo_alumno,
       grado: student.grado,
       maestro_id: student.maestro.id,
     });
@@ -94,36 +81,31 @@ function StudentRegistration() {
   };
 
   const handleDelete = async (id) => {
-    if (confirm('¿Estás seguro de que quieres eliminar este estudiante?')) {
-      setError(null);
-      setLoading(true);
+    if (window.confirm('¿Estás seguro de que quieres eliminar este estudiante?')) {
       try {
         await StudentService.deleteStudent(id, token);
-        fetchStudents(); // Refresh student list
+        showSuccessToast('Estudiante eliminado correctamente.');
+        fetchStudents();
       } catch (err) {
-        setError(err.message || 'Error al eliminar estudiante.');
+        showErrorToast(err.message || 'Error al eliminar el estudiante.');
         console.error('Error deleting student:', err);
-      } finally {
-        setLoading(false);
       }
     }
   };
 
   const toggleStatus = async (student) => {
-    setError(null);
-    setLoading(true);
     try {
+      const updatedStatus = !student.esta_activo;
       await StudentService.updateStudent(student.id, {
         ...student,
-        esta_activo: !student.esta_activo,
-        maestro_id: student.maestro.id, // Ensure maestro_id is sent back
+        esta_activo: updatedStatus,
+        maestro_id: student.maestro.id,
       }, token);
-      fetchStudents(); // Refresh student list
+      showSuccessToast(`Estudiante ${updatedStatus ? 'activado' : 'desactivado'} con éxito.`);
+      fetchStudents();
     } catch (err) {
-      setError(err.message || 'Error al cambiar estado del estudiante.');
+      showErrorToast(err.message || 'Error al cambiar el estado del estudiante.');
       console.error('Error toggling student status:', err);
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -149,24 +131,17 @@ function StudentRegistration() {
     }
   };
 
-  const getAvatarEmoji = (name) => {
-    const emojis = ['👧', '👦', '🧒', '👶'];
-    const index = name.charCodeAt(0) % emojis.length;
-    return emojis[index];
-  };
-
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center">Cargando estudiantes...</div>;
-  }
-
-  if (error) {
-    return <div className="min-h-screen flex items-center justify-center text-red-500">Error: {error}</div>;
-  }
+  // Estadísticas rápidas
+  const totalEstudiantes = students.length;
+  const totalActivos = students.filter(s => s.esta_activo).length;
+  const totalPorGrado = [4, 5, 6].map(grade => ({
+    grade,
+    count: students.filter(s => s.grado === grade).length
+  }));
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto">
-        
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
           <div className="flex items-center gap-4">
@@ -179,18 +154,11 @@ function StudentRegistration() {
             </button>
             <h1 className="text-4xl font-bold text-gray-800">Registro de Estudiantes</h1>
           </div>
-          
           <button
             onClick={() => {
               setShowForm(true);
               setEditingStudent(null);
-              setFormData({
-                nombre: '',
-                usuario: '',
-                password: '',
-                grado: 4,
-                maestro_id: teacherData?.id,
-              });
+              setFormData({ nombre: '', usuario: '', password: '', codigo_alumno: '', grado: 4, maestro_id: teacherData?.id });
             }}
             className="flex items-center gap-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white px-6 py-3 rounded-xl hover:shadow-lg transition-all"
           >
@@ -205,36 +173,30 @@ function StudentRegistration() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Total Estudiantes</p>
-                <p className="text-3xl font-bold text-gray-800">{students.length}</p>
+                <p className="text-3xl font-bold text-gray-800">{totalEstudiantes}</p>
               </div>
               <div className="w-12 h-12 bg-blue-500 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
-
           <div className="bg-white rounded-2xl p-6 shadow-lg">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600 mb-1">Estudiantes Activos</p>
-                <p className="text-3xl font-bold text-green-600">
-                  {students.filter(s => s.esta_activo).length}
-                </p>
+                <p className="text-3xl font-bold text-green-600">{totalActivos}</p>
               </div>
               <div className="w-12 h-12 bg-green-500 rounded-xl flex items-center justify-center">
                 <Users className="w-6 h-6 text-white" />
               </div>
             </div>
           </div>
-
-          {[4, 5, 6].map(grade => (
+          {totalPorGrado.map(({ grade, count }) => (
             <div key={grade} className="bg-white rounded-2xl p-6 shadow-lg">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-gray-600 mb-1">{grade}° Grado</p>
-                  <p className="text-3xl font-bold text-gray-800">
-                    {students.filter(s => s.grado === grade).length}
-                  </p>
+                  <p className="text-3xl font-bold text-gray-800">{count}</p>
                 </div>
                 <div className={`w-12 h-12 ${
                   grade === 4 ? 'bg-green-500' :
@@ -262,7 +224,6 @@ function StudentRegistration() {
                 />
               </div>
             </div>
-            
             <div className="md:w-48">
               <select
                 value={selectedGrade}
@@ -290,20 +251,13 @@ function StudentRegistration() {
                   onClick={() => {
                     setShowForm(false);
                     setEditingStudent(null);
-                    setFormData({
-                      nombre: '',
-                      usuario: '',
-                      password: '',
-                      grado: 4,
-                      maestro_id: teacherData?.id,
-                    });
+                    setFormData({ nombre: '', usuario: '', password: '', codigo_alumno: '', grado: 4, maestro_id: teacherData?.id });
                   }}
                   className="text-gray-500 hover:text-gray-700"
                 >
                   <X className="w-6 h-6" />
                 </button>
               </div>
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -318,7 +272,6 @@ function StudentRegistration() {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Nombre de Usuario *
@@ -332,7 +285,6 @@ function StudentRegistration() {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Código de Alumno *
@@ -347,7 +299,6 @@ function StudentRegistration() {
                     required
                   />
                 </div>
-
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">
                     Grado *
@@ -362,13 +313,6 @@ function StudentRegistration() {
                     <option value={6}>Sexto Grado</option>
                   </select>
                 </div>
-
-                {error && (
-                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl">
-                    {error}
-                  </div>
-                )}
-
                 <button
                   type="submit"
                   disabled={loading}
@@ -389,16 +333,14 @@ function StudentRegistration() {
               Estudiantes Registrados ({filteredStudents.length})
             </h2>
           </div>
-
           <div className="divide-y divide-gray-200">
             {filteredStudents.map((student) => (
               <div key={student.id} className="p-6 hover:bg-gray-50 transition-all">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-3xl">
-                      {getAvatarEmoji(student.nombre)}
+                      <FaUserCircle size={48} />
                     </div>
-                    
                     <div>
                       <h3 className="text-xl font-bold text-gray-800">
                         {student.nombre}
@@ -418,7 +360,6 @@ function StudentRegistration() {
                       </div>
                     </div>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => toggleStatus(student)}
@@ -430,14 +371,12 @@ function StudentRegistration() {
                     >
                       {student.esta_activo ? 'Desactivar' : 'Activar'}
                     </button>
-                    
                     <button
                       onClick={() => handleEdit(student)}
                       className="text-blue-600 hover:text-blue-800 p-2 hover:bg-blue-100 rounded-lg transition-all"
                     >
                       <Edit className="w-4 h-4" />
                     </button>
-                    
                     <button
                       onClick={() => handleDelete(student.id)}
                       className="text-red-600 hover:text-red-800 p-2 hover:bg-red-100 rounded-lg transition-all"
@@ -449,7 +388,6 @@ function StudentRegistration() {
               </div>
             ))}
           </div>
-
           {filteredStudents.length === 0 && (
             <div className="p-12 text-center">
               <Users className="w-16 h-16 text-gray-300 mx-auto mb-4" />

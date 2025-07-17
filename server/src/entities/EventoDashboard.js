@@ -1,40 +1,36 @@
 const { EntitySchema } = require("typeorm");
 
 module.exports = new EntitySchema({
-    name: "Recompensa",
-    tableName: "recompensas",
+    name: "EventoDashboard",
+    tableName: "eventos_dashboard",
     columns: {
         id: {
             primary: true,
             type: "int",
             generated: "increment"
         },
-        nombre: {
-            type: "varchar",
-            unique: true
+        tipo: {
+            type: "varchar"
         },
         descripcion: {
             type: "varchar"
         },
-        costo_puntos: {
-            type: "int"
-        },
-        icono_nombre: {
-            type: "varchar",
+        grado: {
+            type: "int",
             nullable: true
         },
-        fecha_creacion: {
+        fecha: {
             type: "timestamp",
             default: () => "CURRENT_TIMESTAMP"
         }
     },
     relations: {
-        maestro: {
-            target: "Maestro",
+        estudiante: {
+            target: "Estudiante",
             type: "many-to-one",
-            joinColumn: { name: "maestro_id" },
+            joinColumn: { name: "estudiante_id" },
             onDelete: "CASCADE",
             onUpdate: "CASCADE"
         }
     }
-});
+}); 

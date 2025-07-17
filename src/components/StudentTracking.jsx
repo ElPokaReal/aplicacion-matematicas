@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Download, Users, Star, TrendingUp, Award, ToggleRight, ToggleLeft } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import StudentService from '../services/StudentService';
+import { FaUserCircle } from 'react-icons/fa';
 
 function StudentTracking() {
   const navigate = useNavigate();
@@ -61,12 +62,6 @@ function StudentTracking() {
 
   const getStatusColor = (esta_activo) => {
     return esta_activo ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800';
-  };
-
-  const getAvatarEmoji = (name) => {
-    const emojis = ['👧', '👦', '🧒', '👶'];
-    const index = name.charCodeAt(0) % emojis.length;
-    return emojis[index];
   };
 
   if (loading) {
@@ -202,7 +197,7 @@ function StudentTracking() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-3xl">
-                      {getAvatarEmoji(student.nombre)}
+                      <FaUserCircle size={48} />
                     </div>
                     
                     <div>

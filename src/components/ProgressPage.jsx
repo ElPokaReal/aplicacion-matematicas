@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, TrendingUp, Star, Target, Trophy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import StudentService from '../services/StudentService';
+import { FaStar, FaTrophy } from 'react-icons/fa';
 
 function ProgressPage() {
   const navigate = useNavigate();
@@ -211,7 +212,7 @@ function ProgressPage() {
         {/* Motivational Message */}
         <div className="text-center mt-8 bg-white/10 backdrop-blur-sm rounded-2xl p-6">
           <h3 className="text-2xl font-bold text-gray-800 mb-2">
-            ¡Sigue así! 🌟
+            ¡Sigue así! <FaStar className="inline ml-2" />
           </h3>
           <p className="text-gray-600 text-lg">
             Cada ejercicio que resuelves te acerca más a ser un experto en matemáticas.

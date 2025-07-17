@@ -1,5 +1,8 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+
 import MainMenu from './components/MainMenu';
 import HomePage from './components/HomePage';
 import StudentDashboard from './components/StudentDashboard';
@@ -13,6 +16,8 @@ import ExerciseManagement from './components/ExerciseManagement';
 import StudentTracking from './components/StudentTracking';
 import StatisticsReports from './components/StatisticsReports';
 import StudentRegistration from './components/StudentRegistration';
+import RewardManagement from './components/RewardManagement';
+import AchievementManagement from './components/AchievementManagement';
 import { useAuth } from './context/AuthContext';
 
 function App() {
@@ -49,9 +54,23 @@ function App() {
             <Route path="/maestro/estudiantes" element={<StudentTracking />} />
             <Route path="/maestro/estadisticas" element={<StatisticsReports />} />
             <Route path="/maestro/registro" element={<StudentRegistration />} />
+            <Route path="/maestro/recompensas" element={<RewardManagement />} />
+            <Route path="/maestro/logros" element={<AchievementManagement />} />
           </Routes>
         </div>
       </Router>
+      <ToastContainer
+        position="bottom-right"
+        autoClose={5000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
     </>
   );
 }

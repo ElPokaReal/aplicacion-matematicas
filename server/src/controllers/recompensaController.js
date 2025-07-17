@@ -7,7 +7,7 @@ const Estudiante = require('../entities/Estudiante');
 exports.getAllRecompensas = async (req, res) => {
     try {
         const recompensaRepository = AppDataSource.getRepository(Recompensa);
-        const recompensas = await recompensaRepository.find();
+        const recompensas = await recompensaRepository.find({ where: { maestro: { id: req.user.id } } });
         res.status(200).json(recompensas);
     } catch (error) {
         console.error('Error al obtener recompensas:', error);
@@ -33,9 +33,9 @@ exports.getRecompensaById = async (req, res) => {
 
 // Crear una nueva recompensa (solo para maestros)
 exports.createRecompensa = async (req, res) => {
-    const { nombre, descripcion, costo_en_puntos, icono_url } = req.body;
+    const { nombre, descripcion, costo_puntos, icono_nombre } = req.body;
 
-    if (!nombre || costo_en_puntos === undefined) {
+    if (!nombre || costo_puntos === undefined) {
         return res.status(400).json({ message: 'Nombre y costo en puntos son obligatorios.' });
     }
 
@@ -49,8 +49,9 @@ exports.createRecompensa = async (req, res) => {
         const nuevaRecompensa = recompensaRepository.create({
             nombre,
             descripcion,
-            costo_en_puntos,
-            icono_url
+            costo_puntos,
+            icono_nombre,
+            maestro: { id: req.user.id }
         });
 
         await recompensaRepository.save(nuevaRecompensa);
@@ -64,15 +65,17 @@ exports.createRecompensa = async (req, res) => {
 // Actualizar una recompensa (solo para maestros)
 exports.updateRecompensa = async (req, res) => {
     const { id } = req.params;
-    const { nombre, descripcion, costo_en_puntos, icono_url } = req.body;
+    const { nombre, descripcion, costo_puntos, icono_nombre } = req.body;
 
     try {
         const recompensaRepository = AppDataSource.getRepository(Recompensa);
-        let recompensa = await recompensaRepository.findOne({ where: { id } });
+        let recompensa = await recompensaRepository.findOne({ where: { id }, relations: ['maestro'] });
         if (!recompensa) {
             return res.status(404).json({ message: 'Recompensa no encontrada.' });
         }
-
+        if (!recompensa.maestro || recompensa.maestro.id !== req.user.id) {
+            return res.status(403).json({ message: 'No tienes permiso para editar esta recompensa.' });
+        }
         if (nombre && nombre !== recompensa.nombre) {
             const existingRecompensa = await recompensaRepository.findOne({ where: { nombre } });
             if (existingRecompensa && existingRecompensa.id !== recompensa.id) {
@@ -81,8 +84,8 @@ exports.updateRecompensa = async (req, res) => {
             recompensa.nombre = nombre;
         }
         if (descripcion) recompensa.descripcion = descripcion;
-        if (costo_en_puntos !== undefined) recompensa.costo_en_puntos = costo_en_puntos;
-        if (icono_url) recompensa.icono_url = icono_url;
+        if (costo_puntos !== undefined) recompensa.costo_puntos = costo_puntos;
+        if (icono_nombre) recompensa.icono_nombre = icono_nombre;
 
         await recompensaRepository.save(recompensa);
         res.status(200).json({ message: 'Recompensa actualizada exitosamente.', recompensa });
@@ -138,14 +141,10 @@ exports.unlockRecompensa = async (req, res) => {
             return res.status(400).json({ message: 'El estudiante ya ha desbloqueado esta recompensa.' });
         }
 
-        console.log(`Intentando desbloquear recompensa. Puntos del estudiante: ${estudiante.puntos_recompensa}, Costo de la recompensa: ${recompensa.costo_en_puntos}`);
-        // Verificar si el estudiante tiene suficientes puntos
-        if (estudiante.puntos_recompensa < recompensa.costo_en_puntos) {
-            console.log('Puntos insuficientes. Desbloqueo denegado.');
+        // Usar costo_puntos para la validación
+        if (estudiante.puntos_recompensa < recompensa.costo_puntos) {
             return res.status(400).json({ message: 'Puntos de recompensa insuficientes.' });
         }
-
-        
 
         const nuevaRecompensaDesbloqueada = recompensaDesbloqueadaRepository.create({
             estudiante,

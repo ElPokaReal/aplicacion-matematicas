@@ -16,6 +16,8 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import TeacherService from '../services/TeacherService';
+import { descargarReporteGeneral } from '../services/ReportService';
+import { showInfoToast } from '../utils/toastHelper';
 
 function StatisticsReports() {
   const navigate = useNavigate();
@@ -71,7 +73,8 @@ function StatisticsReports() {
   };
 
   const exportReport = () => {
-    alert('Reporte exportado exitosamente (funcionalidad de exportación real no implementada).');
+    showInfoToast('Generando el reporte... La descarga comenzará en breve.');
+    descargarReporteGeneral();
   };
 
   if (loading) {
@@ -85,28 +88,42 @@ function StatisticsReports() {
   // Group exercise performance by grade
   const gradeStats = exercisePerformance.reduce((acc, curr) => {
     const grade = curr.grado;
+    // Normalizar average_correctness: si es null, undefined o string no numérica, poner 0
+    let avg = Number(curr.average_correctness);
+    if (isNaN(avg)) avg = 0;
     if (!acc[grade]) {
       acc[grade] = { totalCorrectness: 0, count: 0, exercises: 0 };
     }
-    acc[grade].totalCorrectness += curr.average_correctness;
+    acc[grade].totalCorrectness += avg;
     acc[grade].count++;
     acc[grade].exercises++; // Assuming each entry is one exercise type
     return acc;
   }, {});
 
-  const formattedGradeStats = Object.keys(gradeStats).map(grade => ({
-    grade: parseInt(grade),
-    avgScore: Math.round((gradeStats[grade].totalCorrectness / gradeStats[grade].count) * 100),
-    exercises: gradeStats[grade].exercises,
-    color: grade === '4' ? 'from-green-400 to-green-600' : grade === '5' ? 'from-blue-400 to-blue-600' : 'from-purple-400 to-purple-600'
-  })).sort((a, b) => a.grade - b.grade);
+  const formattedGradeStats = Object.keys(gradeStats).map(grade => {
+    const count = gradeStats[grade].count;
+    const avgScore = count > 0
+      ? Math.round((gradeStats[grade].totalCorrectness / count) * 100)
+      : 0;
+    return {
+      grade: parseInt(grade),
+      avgScore,
+      exercises: gradeStats[grade].exercises,
+      color: grade === '4' ? 'from-green-400 to-green-600' : grade === '5' ? 'from-blue-400 to-blue-600' : 'from-purple-400 to-purple-600',
+      count
+    };
+  }).sort((a, b) => a.grade - b.grade);
 
   // Group exercise performance by topic (tipo_operacion)
-  const topicPerformance = exercisePerformance.map(item => ({
-    topic: item.tipo_operacion,
-    score: Math.round(item.average_correctness * 100),
-    grade: item.grado, // Keep grade for potential filtering/display
-  }));
+  const topicPerformance = exercisePerformance.map(item => {
+    let avg = Number(item.average_correctness);
+    if (isNaN(avg)) avg = 0;
+    return {
+      topic: item.tipo_operacion,
+      score: Math.round(avg * 100),
+      grade: item.grado, // Keep grade for potential filtering/display
+    };
+  });
 
   return (
     <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-blue-50">
@@ -130,7 +147,7 @@ function StatisticsReports() {
             className="flex items-center gap-2 bg-green-500 text-white px-6 py-3 rounded-xl hover:bg-green-600 transition-all"
           >
             <Download className="w-5 h-5" />
-            Exportar Reporte
+            Exportar Reporte General
           </button>
         </div>
 
@@ -197,7 +214,7 @@ function StatisticsReports() {
                   <div className="flex items-center justify-between mb-3">
                     <h3 className="text-lg font-bold text-gray-800">{grade.grade}° Grado</h3>
                     <span className={`text-lg font-bold ${getScoreColor(grade.avgScore / 100)}`}>
-                      {grade.avgScore}%
+                      {grade.count === 0 ? '—' : `${grade.avgScore}%`}
                     </span>
                   </div>
                   
@@ -335,8 +352,8 @@ function StatisticsReports() {
         </div>
 
         {/* Recomendaciones (Static for now) */}
-        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white">
-          <h2 className="text-2xl font-bold mb-4">📊 Recomendaciones Basadas en Datos</h2>
+        <div className="bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg p-6 text-white drop-shadow-lg">
+          <h2 className="text-2xl font-bold mb-4 drop-shadow">📊 Recomendaciones Basadas en Datos</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4">
@@ -344,7 +361,7 @@ function StatisticsReports() {
                 <CheckCircle className="w-5 h-5 text-green-300" />
                 <h3 className="font-bold">Fortalezas Identificadas</h3>
               </div>
-              <ul className="text-sm space-y-1 text-white/90">
+              <ul className="text-sm space-y-1 text-white/90 drop-shadow">
                 <li>• Excelente rendimiento en operaciones básicas</li>
                 <li>• Alta participación en ejercicios de suma y resta</li>
                 <li>• Buen promedio general del 87%</li>
@@ -356,7 +373,7 @@ function StatisticsReports() {
                 <Target className="w-5 h-5 text-yellow-300" />
                 <h3 className="font-bold">Áreas de Mejora</h3>
               </div>
-              <ul className="text-sm space-y-1 text-white/90">
+              <ul className="text-sm space-y-1 text-white/90 drop-shadow">
                 <li>• Reforzar conceptos de fracciones y decimales</li>
                 <li>• Aumentar práctica en temas de dificultad alta</li>
                 <li>• Motivar a estudiantes menos activos</li>

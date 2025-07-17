@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Check, X, Star, RotateCcw } from 'lucide-react';
+import { FaStar, FaFire, FaTrophy, FaSmile, FaRocket } from 'react-icons/fa';
 import { useAuth } from '../context/AuthContext';
 import ExerciseService from '../services/ExerciseService';
 import StudentService from '../services/StudentService';
@@ -107,9 +108,7 @@ function ExerciseArea() {
     setFeedback({
       show: true,
       correct,
-      message: correct ? 
-        '¡Excelente! 🎉 ¡Respuesta correcta!' : 
-        `No es correcto. La respuesta era ${currentExercise.respuesta_correcta}`
+      message: correct ? '¡Excelente! ' : `No es correcto. La respuesta era ${currentExercise.respuesta_correcta}`
     });
 
     if (correct) {
@@ -175,7 +174,7 @@ function ExerciseArea() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-slate-50 to-blue-50">
         <div className="bg-white rounded-3xl shadow-2xl p-8 text-center max-w-md">
-          <h2 className="text-3xl font-bold text-green-600 mb-4">¡Felicidades! 🎉</h2>
+          <h2 className="text-3xl font-bold text-green-600 mb-4">¡Felicidades! <FaTrophy className="inline ml-2" /></h2>
           <p className="text-xl text-gray-800 mb-6">
             Has completado todos los ejercicios de este grado.
             Tu maestro agregará muchos más pronto.
@@ -238,7 +237,7 @@ function ExerciseArea() {
             <h1 className="text-3xl font-bold text-gray-800">{currentGradeInfo?.title}</h1>
             {streak > 0 && (
               <div className="flex items-center gap-1 justify-center mt-1">
-                <span className="text-yellow-300">🔥</span>
+                <FaFire className="text-yellow-300" />
                 <span className="text-gray-800 font-bold">Racha: {streak}</span>
               </div>
             )}
@@ -312,7 +311,7 @@ function ExerciseArea() {
         {/* Encouragement */}
         <div className="text-center">
           <p className="text-gray-600 text-lg">
-            💪 ¡Sigue así! Cada ejercicio te hace más fuerte en matemáticas
+            <FaRocket className="inline mr-2" /> ¡Sigue así! Cada ejercicio te hace más fuerte en matemáticas
           </p>
         </div>
       </div>

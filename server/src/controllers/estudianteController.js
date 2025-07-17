@@ -185,7 +185,8 @@ exports.loginEstudiante = async (req, res) => {
             nombre: estudiante.nombre,
             usuario: estudiante.usuario,
             codigo_alumno: estudiante.codigo_alumno,
-            puntos_recompensa: estudiante.puntos_recompensa
+            puntos_recompensa: estudiante.puntos_recompensa,
+            grado: estudiante.grado
         });
 
     } catch (error) {

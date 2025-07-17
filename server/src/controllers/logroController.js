@@ -7,7 +7,7 @@ const Estudiante = require('../entities/Estudiante');
 exports.getAllLogros = async (req, res) => {
     try {
         const logroRepository = AppDataSource.getRepository(Logro);
-        const logros = await logroRepository.find();
+        const logros = await logroRepository.find({ where: { maestro: { id: req.user.id } } });
         res.status(200).json(logros);
     } catch (error) {
         console.error('Error al obtener logros:', error);
@@ -33,7 +33,7 @@ exports.getLogroById = async (req, res) => {
 
 // Crear un nuevo logro (solo para maestros)
 exports.createLogro = async (req, res) => {
-    const { nombre, descripcion, icono_url, puntos_otorgados } = req.body;
+    const { nombre, descripcion, icono_nombre, puntos_otorgados, tipo_logro, valor_requerido, criterio_adicional } = req.body;
 
     if (!nombre || !descripcion || puntos_otorgados === undefined) {
         return res.status(400).json({ message: 'Nombre, descripción y puntos otorgados son obligatorios.' });
@@ -49,8 +49,12 @@ exports.createLogro = async (req, res) => {
         const nuevoLogro = logroRepository.create({
             nombre,
             descripcion,
-            icono_url,
-            puntos_otorgados
+            icono_nombre,
+            puntos_otorgados,
+            tipo_logro,
+            valor_requerido,
+            criterio_adicional,
+            maestro: { id: req.user.id }
         });
 
         await logroRepository.save(nuevoLogro);
@@ -64,15 +68,17 @@ exports.createLogro = async (req, res) => {
 // Actualizar un logro (solo para maestros)
 exports.updateLogro = async (req, res) => {
     const { id } = req.params;
-    const { nombre, descripcion, icono_url, puntos_otorgados } = req.body;
+    const { nombre, descripcion, icono_nombre, puntos_otorgados, tipo_logro, valor_requerido, criterio_adicional } = req.body;
 
     try {
         const logroRepository = AppDataSource.getRepository(Logro);
-        let logro = await logroRepository.findOne({ where: { id } });
+        let logro = await logroRepository.findOne({ where: { id }, relations: ['maestro'] });
         if (!logro) {
             return res.status(404).json({ message: 'Logro no encontrado.' });
         }
-
+        if (!logro.maestro || logro.maestro.id !== req.user.id) {
+            return res.status(403).json({ message: 'No tienes permiso para editar este logro.' });
+        }
         if (nombre && nombre !== logro.nombre) {
             const existingLogro = await logroRepository.findOne({ where: { nombre } });
             if (existingLogro && existingLogro.id !== logro.id) {
@@ -81,8 +87,11 @@ exports.updateLogro = async (req, res) => {
             logro.nombre = nombre;
         }
         if (descripcion) logro.descripcion = descripcion;
-        if (icono_url) logro.icono_url = icono_url;
+        if (icono_nombre) logro.icono_nombre = icono_nombre;
         if (puntos_otorgados !== undefined) logro.puntos_otorgados = puntos_otorgados;
+        if (tipo_logro) logro.tipo_logro = tipo_logro;
+        if (valor_requerido !== undefined) logro.valor_requerido = valor_requerido;
+        if (criterio_adicional) logro.criterio_adicional = criterio_adicional;
 
         await logroRepository.save(logro);
         res.status(200).json({ message: 'Logro actualizado exitosamente.', logro });

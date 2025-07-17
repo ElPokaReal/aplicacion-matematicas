@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Trophy, TrendingUp, Star, Target, Users, LogOut } from 'lucide-react';
+import { FaUser, FaStar, FaTrophy, FaPuzzlePiece, FaChalkboardTeacher, FaMedal, FaRocket, FaRainbow, FaHandPaper } from 'react-icons/fa';
+import { GiBearFace, GiRabbit, GiOwl } from 'react-icons/gi';
 import { useAuth } from '../context/AuthContext';
 import StudentService from '../services/StudentService';
 import RewardService from '../services/RewardService';
@@ -63,12 +65,13 @@ function StudentDashboard() {
     );
   }
 
+  // Reemplazo los arrays subjects y quickStats para usar íconos de react-icons en vez de emojis
   const subjects = [
     {
       id: 'matematicas',
       title: 'Matemáticas',
-      icon: '🔢',
-      character: '🦊',
+      icon: <FaChalkboardTeacher size={48} className="text-indigo-600 mx-auto" />, // se mantiene
+      character: <GiRabbit size={32} className="text-indigo-600 mx-auto" />, // conejo violeta
       characterName: 'Mateo',
       color: 'from-blue-400 to-purple-500',
       description: 'Suma, resta, multiplicación y más',
@@ -77,8 +80,8 @@ function StudentDashboard() {
     {
       id: 'geometria',
       title: 'Geometría',
-      icon: '📐',
-      character: '🐻',
+      icon: <FaPuzzlePiece size={48} className="text-yellow-600 mx-auto" />,
+      character: <GiBearFace size={32} className="text-yellow-600 mx-auto" />, // oso amarillo
       characterName: 'Bruno',
       color: 'from-green-400 to-teal-500',
       description: 'Formas, figuras y medidas',
@@ -87,29 +90,28 @@ function StudentDashboard() {
     {
       id: 'problemas',
       title: 'Problemas',
-      icon: '🧩',
-      character: '🦉',
+      icon: <FaPuzzlePiece size={48} className="text-purple-600 mx-auto" />,
+      character: <GiOwl size={32} className="text-purple-600 mx-auto" />, // búho morado
       characterName: 'Olivia',
       color: 'from-orange-400 to-red-500',
       description: 'Resuelve problemas divertidos',
       action: () => navigate('/grados')
     }
   ];
-
   const quickStats = [
-    { label: 'Estrellas', value: studentData?.puntos_recompensa || 0, icon: '⭐', color: 'bg-yellow-400' },
-    { label: 'Ejercicios', value: totalExercisesCompleted, icon: '📝', color: 'bg-blue-400' },
-    { label: 'Premios', value: unlockedRewardsCount, icon: '🏆', color: 'bg-purple-400' },
-    { label: 'Nivel', value: (studentData?.puntos_recompensa || 0) < 10 ? 'Principiante' : (studentData?.puntos_recompensa || 0) < 50 ? 'Intermedio' : 'Avanzado', icon: '🎯', color: 'bg-green-400' }
+    { label: 'Estrellas', value: studentData?.puntos_recompensa || 0, icon: <FaStar />, color: 'bg-yellow-400' },
+    { label: 'Ejercicios', value: totalExercisesCompleted, icon: <FaPuzzlePiece />, color: 'bg-blue-400' },
+    { label: 'Premios', value: unlockedRewardsCount, icon: <FaTrophy />, color: 'bg-purple-400' },
+    { label: 'Nivel', value: (studentData?.puntos_recompensa || 0) < 10 ? 'Principiante' : (studentData?.puntos_recompensa || 0) < 50 ? 'Intermedio' : 'Avanzado', icon: <FaRocket />, color: 'bg-green-400' }
   ];
 
   return (
     <div className="min-h-screen p-4 relative overflow-hidden">
       {/* Elementos decorativos */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 right-10 text-6xl animate-pulse opacity-30">🌟</div>
-        <div className="absolute bottom-20 left-10 text-5xl animate-bounce opacity-30">⭐</div>
-        <div className="absolute top-1/2 right-20 text-4xl animate-pulse opacity-30">✨</div>
+        <div className="absolute top-10 right-10 text-6xl animate-pulse opacity-30 flex justify-center items-center"><FaStar className="text-white" /></div>
+        <div className="absolute bottom-20 left-10 text-5xl animate-bounce opacity-30 flex justify-center items-center"><FaMedal className="text-white" /></div>
+        <div className="absolute top-1/2 right-20 text-4xl animate-pulse opacity-30 flex justify-center items-center"><FaRocket className="text-white" /></div>
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10">
@@ -128,7 +130,7 @@ function StudentDashboard() {
             <div className="flex items-center justify-center gap-4 mb-2">
               <div>
                 <h1 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-600">
-                  ¡Hola, {studentData?.nombre?.split(' ')[0]}! 👋
+                  ¡Hola, {studentData?.nombre?.split(' ')[0]}! <FaHandPaper className="inline ml-2" />
                 </h1>
                 <p className="text-xl text-gray-700">
                   {studentData?.grado}° Grado • Código: {studentData?.codigo_alumno}
@@ -157,7 +159,7 @@ function StudentDashboard() {
         {/* Materias principales */}
         <div className="mb-8">
           <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">
-            🎓 Elige tu Materia Favorita
+            <FaChalkboardTeacher className="inline mr-2" /> Elige tu Materia Favorita
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -191,9 +193,7 @@ function StudentDashboard() {
                     </div>
                   </div>
                   
-                  <button className={`w-full bg-gradient-to-r ${subject.color} text-white py-3 rounded-xl font-bold hover:shadow-lg transform group-hover:scale-105 transition-all`}>
-                    ¡Empezar Aventura!
-                  </button>
+                  <button className={`w-full bg-gradient-to-r ${subject.color} text-white py-3 rounded-xl font-bold hover:shadow-lg transform group-hover:scale-105 transition-all drop-shadow`}>¡Empezar Aventura!</button>
                 </div>
               </div>
             ))}
@@ -235,11 +235,11 @@ function StudentDashboard() {
 
         {/* Mensaje motivacional personalizado */}
         <div className="text-center mt-8 bg-gradient-to-r from-pink-300 to-purple-300 rounded-3xl p-8 shadow-xl">
-          <div className="text-6xl mb-4">🌈</div>
-          <h3 className="text-2xl font-bold text-white mb-2">
-            ¡{studentData?.nombre?.split(' ')[0]}, eres increíble! 🌟
+          <div className="text-6xl mb-4 flex justify-center items-center"><FaRainbow className="text-white drop-shadow-lg" /></div>
+          <h3 className="text-2xl font-bold text-white drop-shadow-lg mb-2">
+            ¡{studentData?.nombre?.split(' ')[0]}, eres increíble!
           </h3>
-          <p className="text-white/90 text-lg">
+          <p className="text-white/90 text-lg drop-shadow">
             Cada día que practicas te vuelves más inteligente. ¡Sigue así!
           </p>
         </div>

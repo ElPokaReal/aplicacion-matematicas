@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogIn, Eye, EyeOff, GraduationCap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { showSuccessToast, showErrorToast } from '../utils/toastHelper';
 
 function TeacherLogin() {
   const navigate = useNavigate();
@@ -9,20 +10,25 @@ function TeacherLogin() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
-    setError('');
 
-    const success = await login({ email, password }, 'teacher');
-    
-    if (success) {
-      navigate('/maestro/dashboard');
-    } else {
-      setError('Credenciales incorrectas. Por favor, verifica tu email y contraseña.');
+    try {
+      const success = await login({ email, password }, 'teacher');
+      
+      if (success) {
+        showSuccessToast('¡Bienvenido! Has iniciado sesión correctamente.');
+        navigate('/maestro/dashboard');
+      } else {
+        // Esta rama puede que no se alcance si `login` siempre lanza un error en caso de fallo.
+        showErrorToast('Credenciales incorrectas. Por favor, verifica tu email y contraseña.');
+      }
+    } catch (err) {
+      // Se captura el error que `login` pueda lanzar desde el AuthContext.
+      showErrorToast(err.message || 'Ocurrió un error inesperado al intentar iniciar sesión.');
     }
     
     setLoading(false);
@@ -98,12 +104,6 @@ function TeacherLogin() {
                 </button>
               </div>
             </div>
-
-            {error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl">
-                {error}
-              </div>
-            )}
 
             <button
               type="submit"

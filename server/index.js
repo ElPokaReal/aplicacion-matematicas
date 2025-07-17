@@ -23,6 +23,7 @@ const logroRoutes = require('./src/routes/logroRoutes');
 const recompensaRoutes = require('./src/routes/recompensaRoutes');
 const progresoEstudianteRoutes = require('./src/routes/progresoEstudianteRoutes');
 const dashboardRoutes = require('./src/routes/dashboardRoutes');
+const reporteRoutes = require('./src/routes/reporteRoutes');
 
 // Usar rutas
 app.use('/api/auth', authRoutes);
@@ -32,6 +33,7 @@ app.use('/api/logros', logroRoutes);
 app.use('/api/recompensas', recompensaRoutes);
 app.use('/api/progreso-estudiantes', progresoEstudianteRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reportes', reporteRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!');

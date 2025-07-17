@@ -193,6 +193,100 @@ const StudentService = {
             throw error;
         }
     },
+
+    getAchievementsByStudent: async (studentId, token) => {
+        try {
+            const response = await fetch(`${API_URL}/logros/estudiante/${studentId}`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to fetch achievements');
+            }
+            return data;
+        } catch (error) {
+            console.error(`Error fetching achievements for student ${studentId}:`, error);
+            throw error;
+        }
+    },
+
+    getAllAchievements: async (token) => {
+        try {
+            const response = await fetch(`${API_URL}/logros`, {
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to fetch achievements');
+            }
+            return data;
+        } catch (error) {
+            console.error('Error fetching all achievements:', error);
+            throw error;
+        }
+    },
+    createAchievement: async (achievementData, token) => {
+        try {
+            const response = await fetch(`${API_URL}/logros`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(achievementData),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to create achievement');
+            }
+            return data;
+        } catch (error) {
+            console.error('Error creating achievement:', error);
+            throw error;
+        }
+    },
+    updateAchievement: async (id, achievementData, token) => {
+        try {
+            const response = await fetch(`${API_URL}/logros/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+                body: JSON.stringify(achievementData),
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to update achievement');
+            }
+            return data;
+        } catch (error) {
+            console.error('Error updating achievement:', error);
+            throw error;
+        }
+    },
+    deleteAchievement: async (id, token) => {
+        try {
+            const response = await fetch(`${API_URL}/logros/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                },
+            });
+            const data = await response.json();
+            if (!response.ok) {
+                throw new Error(data.message || 'Failed to delete achievement');
+            }
+            return data;
+        } catch (error) {
+            console.error('Error deleting achievement:', error);
+            throw error;
+        }
+    },
 };
 
 export default StudentService;

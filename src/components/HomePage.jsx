@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Calculator, Star, Users, BookOpen, Play, LogIn, ArrowLeft } from 'lucide-react';
+import { GiBearFace, GiRabbit, GiOwl } from 'react-icons/gi';
+import { FaStar, FaTrophy, FaPuzzlePiece } from 'react-icons/fa';
 
 function HomePage() {
   const navigate = useNavigate();
@@ -55,7 +57,7 @@ function HomePage() {
           {/* Logo y Título */}
           <div className="mb-12">
             <h1 className="text-7xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 mb-4 drop-shadow-lg">
-              🌟 MateAventura
+              MateAventuras
             </h1>
             <p className="text-3xl text-gray-700 font-medium mb-2">
               ¡Descubre la magia de las matemáticas!
@@ -68,19 +70,25 @@ function HomePage() {
           {/* Características con animales */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10 max-w-5xl mx-auto">
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl transform hover:scale-105 transition-all duration-300">
-              <div className="text-6xl mb-4">🐰</div>
+              <div className="flex justify-center items-center text-center mb-4">
+                <GiRabbit className="text-indigo-600" size={48} />
+              </div>
               <h3 className="font-bold text-xl mb-3 text-gray-800">Aprende Jugando</h3>
               <p className="text-gray-600">Con Conejo Rápido resuelve ejercicios súper divertidos</p>
             </div>
             
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl transform hover:scale-105 transition-all duration-300">
-              <div className="text-6xl mb-4">🐻</div>
+              <div className="flex justify-center items-center mb-4">
+                <GiBearFace className="text-yellow-600" size={48} />
+              </div>
               <h3 className="font-bold text-xl mb-3 text-gray-800">Gana Premios</h3>
               <p className="text-gray-600">Oso Sabio te dará medallas y trofeos especiales</p>
             </div>
             
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl p-8 shadow-xl transform hover:scale-105 transition-all duration-300">
-              <div className="text-6xl mb-4">🦉</div>
+              <div className="flex justify-center items-center mb-4">
+                <GiOwl className="text-purple-600" size={48} />
+              </div>
               <h3 className="font-bold text-xl mb-3 text-gray-800">Sigue tu Progreso</h3>
               <p className="text-gray-600">Búho Inteligente registra todos tus logros</p>
             </div>
@@ -90,7 +98,7 @@ function HomePage() {
           <div className="space-y-4">
             <button
               onClick={() => navigate('/estudiante')}
-              className="group bg-gradient-to-r from-green-400 to-blue-500 text-white px-12 py-6 rounded-full text-2xl font-bold shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 flex items-center gap-4 mx-auto"
+              className="group bg-gradient-to-r from-green-400 to-blue-500 text-white px-12 py-6 rounded-full text-2xl font-bold shadow-2xl hover:shadow-3xl transform hover:scale-110 transition-all duration-300 flex items-center gap-4 mx-auto drop-shadow"
             >
               <Play className="w-8 h-8 group-hover:translate-x-2 transition-transform" />
               ¡Empezar mi Aventura!
@@ -101,13 +109,13 @@ function HomePage() {
                 onClick={() => navigate('/progreso')}
                 className="bg-white/80 backdrop-blur-sm text-indigo-600 px-8 py-3 rounded-full font-semibold hover:bg-white transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                📊 Mi Progreso
+                <FaPuzzlePiece className="inline mr-2" /> Mi Progreso
               </button>
               <button
                 onClick={() => navigate('/recompensas')}
                 className="bg-white/80 backdrop-blur-sm text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-white transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
               >
-                🏆 Mis Premios
+                <FaTrophy className="inline mr-2" /> Mis Premios
               </button>
             </div>
           </div>

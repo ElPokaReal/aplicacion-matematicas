@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, BookOpen, Users, GraduationCap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import StudentService from '../services/StudentService';
+import { FaStar, FaLightbulb } from 'react-icons/fa';
 
 function GradeSelection() {
   const navigate = useNavigate();
@@ -145,7 +146,7 @@ function GradeSelection() {
 
                   {/* Stars */}
                   <div className="flex items-center gap-2 mb-4">
-                    <span className="text-yellow-500">⭐</span>
+                    <FaStar className="text-yellow-500" />
                     <span className="font-bold text-gray-700">{gradeProgress.stars} estrellas</span>
                   </div>
 
@@ -170,7 +171,7 @@ function GradeSelection() {
         {/* Call to Action */}
         <div className="text-center mt-12">
           <p className="text-gray-600 text-lg">
-            💡 ¡Elige tu grado y comienza a resolver ejercicios divertidos!
+            <FaLightbulb className="inline mr-2" /> ¡Elige tu grado y comienza a resolver ejercicios divertidos!
           </p>
         </div>
       </div>

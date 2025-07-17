@@ -11,6 +11,7 @@ const progresoEstudianteRoutes = require('./routes/progresoEstudianteRoutes');
 const recompensaRoutes = require('./routes/recompensaRoutes');
 const logroRoutes = require('./routes/logroRoutes');
 const dashboardRoutes = require('./routes/dashboardRoutes');
+const reporteRoutes = require('./routes/reporteRoutes');
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/progreso-estudiantes', progresoEstudianteRoutes);
 app.use('/api/recompensas', recompensaRoutes);
 app.use('/api/logros', logroRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/reportes', reporteRoutes);
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
